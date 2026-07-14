@@ -23,14 +23,19 @@ L.control.layers(
 ).addTo(map);
 
 // --- Routing: Wegpunkte werden über echte Straßen verbunden (OSRM) -------
+// Eigene Wegpunkt-Liste im Code führen (statt inkrementell auf der internen
+// Liste des Routing-Controls herumzusplicen - das war der Bug) und bei jeder
+// Änderung komplett neu an setWaypoints() übergeben. Robuster und deutlich
+// leichter nachzuvollziehen.
 
-let letzteRoute = null; // { coordinates: [[lat,lng],...], distanzKm }
+let wegpunkte = [];      // Array von L.LatLng
+let letzteRoute = null;  // { coordinates: [[lat,lng],...], distanzKm }
 
 function eigenerPinMarker(i, waypoint) {
   const marker = L.marker(waypoint.latLng, { draggable: true });
   marker.on("contextmenu", () => {
-    const wps = routingControl.getWaypoints();
-    routingControl.spliceWaypoints(i, 1);
+    wegpunkte.splice(i, 1);
+    routingControl.setWaypoints(wegpunkte);
   });
   return marker;
 }
@@ -63,20 +68,19 @@ routingControl.on("routingerror", (ev) => {
   console.error("Routing-Fehler:", ev.error);
 });
 
+// Hält unsere eigene Wegpunkt-Liste synchron, auch wenn ein Pin gezogen oder
+// über das Ziehen der Linie ein neuer Zwischenpunkt eingefügt wurde.
 routingControl.on("waypointschanged", (ev) => {
-  if (ev.waypoints.filter(w => w.latLng).length < 2) {
+  wegpunkte = ev.waypoints.filter(w => w.latLng).map(w => w.latLng);
+  if (wegpunkte.length < 2) {
     letzteRoute = null;
-    distanzAnzeigen();
   }
+  distanzAnzeigen();
 });
-
-function anzahlWegpunkte() {
-  return routingControl.getWaypoints().filter(w => w.latLng).length;
-}
 
 function distanzAnzeigen() {
   const anzeige = document.getElementById("distanz-anzeige");
-  const n = anzahlWegpunkte();
+  const n = wegpunkte.length;
   if (letzteRoute) {
     anzeige.textContent = `${n} Wegpunkte · ${letzteRoute.distanzKm.toFixed(1)} km über die Straße`;
   } else {
@@ -86,19 +90,18 @@ function distanzAnzeigen() {
 
 // Klick auf die Karte hängt einen neuen Wegpunkt ans Ende an
 map.on("click", (ev) => {
-  const wps = routingControl.getWaypoints().filter(w => w.latLng);
-  routingControl.spliceWaypoints(wps.length, 0, ev.latlng);
+  wegpunkte = [...wegpunkte, ev.latlng];
+  routingControl.setWaypoints(wegpunkte);
 });
 
 document.getElementById("btn-letzten-loeschen").addEventListener("click", () => {
-  const wps = routingControl.getWaypoints();
-  const belegte = wps.map((w, i) => w.latLng ? i : null).filter(i => i !== null);
-  if (belegte.length) {
-    routingControl.spliceWaypoints(belegte[belegte.length - 1], 1);
-  }
+  if (!wegpunkte.length) return;
+  wegpunkte = wegpunkte.slice(0, -1);
+  routingControl.setWaypoints(wegpunkte);
 });
 
 document.getElementById("btn-reset").addEventListener("click", () => {
+  wegpunkte = [];
   routingControl.setWaypoints([]);
   letzteRoute = null;
   distanzAnzeigen();
@@ -122,9 +125,6 @@ document.getElementById("btn-suchen").addEventListener("click", async () => {
 
 document.getElementById("trip-form").addEventListener("submit", async (ev) => {
   ev.preventDefault();
-  const wegpunkte = routingControl.getWaypoints()
-    .filter(w => w.latLng)
-    .map(w => [w.latLng.lat, w.latLng.lng]);
 
   if (wegpunkte.length < 2) {
     alert("Mindestens 2 Wegpunkte setzen, bevor die Strecke gespeichert wird.");
@@ -138,7 +138,7 @@ document.getElementById("trip-form").addEventListener("submit", async (ev) => {
   const payload = {
     titel: document.getElementById("t-titel").value || null,
     datum: document.getElementById("t-datum").value || null,
-    waypoints: wegpunkte,
+    waypoints: wegpunkte.map(w => [w.lat, w.lng]),
     route: letzteRoute.coordinates,
     distanz_km: Math.round(letzteRoute.distanzKm * 10) / 10,
   };
@@ -148,6 +148,7 @@ document.getElementById("trip-form").addEventListener("submit", async (ev) => {
     body: JSON.stringify(payload),
   });
   ev.target.reset();
+  wegpunkte = [];
   routingControl.setWaypoints([]);
   letzteRoute = null;
   distanzAnzeigen();
@@ -189,7 +190,7 @@ async function tripAufKarteLaden(tripId) {
   const res = await fetch(`${API}/trips/${tripId}`);
   const trip = await res.json();
 
-  const wegpunkte = (trip.waypoints ?? trip.route).map(([lat, lng]) => L.latLng(lat, lng));
+  wegpunkte = (trip.waypoints ?? trip.route).map(([lat, lng]) => L.latLng(lat, lng));
   routingControl.setWaypoints(wegpunkte);
 
   if (wegpunkte.length) {
