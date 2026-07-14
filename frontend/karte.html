@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Strecken – Spritpreis-Advisor</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
   #karte { margin-bottom: 14px; }
   .karten-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
   .karten-toolbar input { flex: 1; min-width: 200px; }
+  .leaflet-routing-container { display: none; } /* Turn-by-Turn-Kasten ausblenden, wir brauchen nur die Route */
 </style>
 </head>
 <body>
@@ -26,9 +28,10 @@
 <main>
   <div class="section-title">Strecke aufzeichnen</div>
   <p class="hinweis">
-    Klick auf die Karte setzt einen Pin. Pins lassen sich per Drag&Drop verschieben,
-    um die tatsächlich gefahrene Route nachzuzeichnen – nicht nur die kürzeste Verbindung.
-    Rechtsklick auf einen Pin entfernt ihn wieder.
+    Klick auf die Karte setzt einen Wegpunkt – die Route dazwischen wird automatisch
+    über echte Straßen berechnet (nicht Luftlinie). Pins lassen sich per Drag&Drop
+    verschieben, um die tatsächlich gefahrene Strecke nachzubilden, z. B. wenn du
+    einen Umweg gefahren bist. Rechtsklick auf einen Pin entfernt ihn wieder.
   </p>
   <div class="karten-toolbar">
     <input type="text" id="ziel-suche" placeholder="Adresse oder Ort suchen…">
@@ -59,6 +62,7 @@
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script src="js/route-editor.js"></script>
 </body>
 </html>

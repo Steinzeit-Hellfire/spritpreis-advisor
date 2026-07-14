@@ -7,17 +7,14 @@ const layerOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
   attribution: "&copy; OpenStreetMap-Mitwirkende",
   maxZoom: 19,
 });
-
 const layerTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap-Mitwirkende, SRTM | Karte: &copy; OpenTopoMap (CC-BY-SA)",
   maxZoom: 17,
 });
-
 const layerVoyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
   attribution: "&copy; OpenStreetMap-Mitwirkende &copy; CARTO",
   maxZoom: 20,
 });
-
 layerOSM.addTo(map);
 L.control.layers(
   { "OpenStreetMap": layerOSM, "OpenTopoMap": layerTopo, "CartoDB Voyager": layerVoyager },
@@ -25,75 +22,83 @@ L.control.layers(
   { position: "topright" }
 ).addTo(map);
 
-let markers = [];    // Leaflet-Marker in Reihenfolge der Pins
-let polyline = null;
+// --- Routing: Wegpunkte werden über echte Straßen verbunden (OSRM) -------
 
-function pinsAlsRoute() {
-  return markers.map(m => {
-    const ll = m.getLatLng();
-    return [ll.lat, ll.lng];
-  });
-}
+let letzteRoute = null; // { coordinates: [[lat,lng],...], distanzKm }
 
-function polylineNeuZeichnen() {
-  const punkte = pinsAlsRoute();
-  if (polyline) map.removeLayer(polyline);
-  if (punkte.length >= 2) {
-    polyline = L.polyline(punkte, { color: "#38bdf8", weight: 4 }).addTo(map);
-  }
-  distanzAnzeigen(punkte);
-}
-
-function distanzAnzeigen(punkte) {
-  const anzeige = document.getElementById("distanz-anzeige");
-  if (punkte.length < 2) {
-    anzeige.textContent = `${punkte.length} Pin(s) gesetzt.`;
-    return;
-  }
-  let gesamt = 0;
-  for (let i = 0; i < punkte.length - 1; i++) {
-    gesamt += haversineKm(punkte[i], punkte[i + 1]);
-  }
-  anzeige.textContent = `${punkte.length} Pins · ca. ${gesamt.toFixed(1)} km (Luftlinie zwischen den Pins)`;
-}
-
-function haversineKm(p1, p2) {
-  const R = 6371;
-  const dLat = (p2[0] - p1[0]) * Math.PI / 180;
-  const dLng = (p2[1] - p1[1]) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
-function pinHinzufuegen(latlng) {
-  const marker = L.marker(latlng, { draggable: true }).addTo(map);
-  marker.on("drag", polylineNeuZeichnen);
+function eigenerPinMarker(i, waypoint) {
+  const marker = L.marker(waypoint.latLng, { draggable: true });
   marker.on("contextmenu", () => {
-    map.removeLayer(marker);
-    markers = markers.filter(m => m !== marker);
-    polylineNeuZeichnen();
+    const wps = routingControl.getWaypoints();
+    routingControl.spliceWaypoints(i, 1);
   });
-  markers.push(marker);
-  polylineNeuZeichnen();
+  return marker;
 }
 
-map.on("click", (ev) => pinHinzufuegen(ev.latlng));
+const routingControl = L.Routing.control({
+  waypoints: [],
+  router: L.Routing.osrmv1({ serviceUrl: "https://router.project-osrm.org/route/v1" }),
+  routeWhileDragging: true,
+  draggableWaypoints: true,
+  addWaypoints: true,       // Ziehen der Linie selbst fügt einen Zwischenpunkt ein
+  fitSelectedRoutes: false,
+  show: false,
+  createMarker: eigenerPinMarker,
+  lineOptions: { styles: [{ color: "#38bdf8", weight: 5, opacity: 0.9 }] },
+}).addTo(map);
+
+routingControl.on("routesfound", (ev) => {
+  const route = ev.routes[0];
+  letzteRoute = {
+    coordinates: route.coordinates.map(c => [c.lat, c.lng]),
+    distanzKm: route.summary.totalDistance / 1000,
+  };
+  distanzAnzeigen();
+});
+
+routingControl.on("waypointschanged", (ev) => {
+  if (ev.waypoints.filter(w => w.latLng).length < 2) {
+    letzteRoute = null;
+    distanzAnzeigen();
+  }
+});
+
+function anzahlWegpunkte() {
+  return routingControl.getWaypoints().filter(w => w.latLng).length;
+}
+
+function distanzAnzeigen() {
+  const anzeige = document.getElementById("distanz-anzeige");
+  const n = anzahlWegpunkte();
+  if (letzteRoute) {
+    anzeige.textContent = `${n} Wegpunkte · ${letzteRoute.distanzKm.toFixed(1)} km über die Straße`;
+  } else {
+    anzeige.textContent = `${n} Wegpunkt(e) gesetzt – mind. 2 nötig, um eine Route zu berechnen.`;
+  }
+}
+
+// Klick auf die Karte hängt einen neuen Wegpunkt ans Ende an
+map.on("click", (ev) => {
+  const wps = routingControl.getWaypoints().filter(w => w.latLng);
+  routingControl.spliceWaypoints(wps.length, 0, ev.latlng);
+});
 
 document.getElementById("btn-letzten-loeschen").addEventListener("click", () => {
-  const letzter = markers.pop();
-  if (letzter) map.removeLayer(letzter);
-  polylineNeuZeichnen();
+  const wps = routingControl.getWaypoints();
+  const belegte = wps.map((w, i) => w.latLng ? i : null).filter(i => i !== null);
+  if (belegte.length) {
+    routingControl.spliceWaypoints(belegte[belegte.length - 1], 1);
+  }
 });
 
 document.getElementById("btn-reset").addEventListener("click", () => {
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-  polylineNeuZeichnen();
+  routingControl.setWaypoints([]);
+  letzteRoute = null;
+  distanzAnzeigen();
 });
 
-// Adresssuche über Nominatim (OpenStreetMap) - setzt die Karte auf den Fundort,
-// fügt aber selbst keinen Pin hinzu (das macht der Klick auf die Karte).
+// Adresssuche über Nominatim (OpenStreetMap) - zentriert die Karte auf den Fundort,
+// fügt aber selbst keinen Wegpunkt hinzu (das macht der Klick auf die Karte).
 document.getElementById("btn-suchen").addEventListener("click", async () => {
   const query = document.getElementById("ziel-suche").value.trim();
   if (!query) return;
@@ -110,15 +115,25 @@ document.getElementById("btn-suchen").addEventListener("click", async () => {
 
 document.getElementById("trip-form").addEventListener("submit", async (ev) => {
   ev.preventDefault();
-  const route = pinsAlsRoute();
-  if (route.length < 2) {
-    alert("Mindestens 2 Pins setzen, bevor die Strecke gespeichert wird.");
+  const wegpunkte = routingControl.getWaypoints()
+    .filter(w => w.latLng)
+    .map(w => [w.latLng.lat, w.latLng.lng]);
+
+  if (wegpunkte.length < 2) {
+    alert("Mindestens 2 Wegpunkte setzen, bevor die Strecke gespeichert wird.");
     return;
   }
+  if (!letzteRoute) {
+    alert("Route wird noch berechnet – kurz warten und nochmal versuchen.");
+    return;
+  }
+
   const payload = {
     titel: document.getElementById("t-titel").value || null,
     datum: document.getElementById("t-datum").value || null,
-    route,
+    waypoints: wegpunkte,
+    route: letzteRoute.coordinates,
+    distanz_km: Math.round(letzteRoute.distanzKm * 10) / 10,
   };
   await fetch(`${API}/trips`, {
     method: "POST",
@@ -126,9 +141,9 @@ document.getElementById("trip-form").addEventListener("submit", async (ev) => {
     body: JSON.stringify(payload),
   });
   ev.target.reset();
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-  polylineNeuZeichnen();
+  routingControl.setWaypoints([]);
+  letzteRoute = null;
+  distanzAnzeigen();
   ladeTrips();
 });
 
@@ -167,13 +182,13 @@ async function tripAufKarteLaden(tripId) {
   const res = await fetch(`${API}/trips/${tripId}`);
   const trip = await res.json();
 
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-  trip.route.forEach(([lat, lng]) => pinHinzufuegen(L.latLng(lat, lng)));
+  const wegpunkte = (trip.waypoints ?? trip.route).map(([lat, lng]) => L.latLng(lat, lng));
+  routingControl.setWaypoints(wegpunkte);
 
-  if (markers.length) {
-    map.fitBounds(L.latLngBounds(trip.route));
+  if (wegpunkte.length) {
+    map.fitBounds(L.latLngBounds(wegpunkte));
   }
 }
 
+distanzAnzeigen();
 ladeTrips();

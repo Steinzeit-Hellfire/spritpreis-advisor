@@ -15,7 +15,9 @@ class TripCreate(BaseModel):
     datum: str | None = None
     start_name: str | None = None
     ziel_name: str | None = None
-    route: list[list[float]]  # [[lat, lng], [lat, lng], ...] - Reihenfolge der Pins
+    waypoints: list[list[float]]        # grobe, vom Nutzer gesetzte/verschobene Pins
+    route: list[list[float]]            # dichte, straßenfolgende Punkte (von OSRM)
+    distanz_km: float | None = None     # falls vom Frontend (OSRM) mitgeliefert
 
 
 def _haversine_km(p1: list[float], p2: list[float]) -> float:
@@ -38,7 +40,9 @@ def trips_liste():
     ergebnisse = []
     for row in rows:
         eintrag = dict(row)
-        eintrag["route"] = json.loads(eintrag.pop("route_geojson"))
+        gespeichert = json.loads(eintrag.pop("route_geojson"))
+        eintrag["waypoints"] = gespeichert.get("waypoints", [])
+        eintrag["route"] = gespeichert.get("route", [])
         ergebnisse.append(eintrag)
     return ergebnisse
 
@@ -51,16 +55,21 @@ def trip_detail(trip_id: int):
     if row is None:
         raise HTTPException(status_code=404, detail="Strecke nicht gefunden")
     eintrag = dict(row)
-    eintrag["route"] = json.loads(eintrag.pop("route_geojson"))
+    gespeichert = json.loads(eintrag.pop("route_geojson"))
+    eintrag["waypoints"] = gespeichert.get("waypoints", [])
+    eintrag["route"] = gespeichert.get("route", [])
     return eintrag
 
 
 @router.post("")
 def trip_anlegen(trip: TripCreate):
+    if len(trip.waypoints) < 2:
+        raise HTTPException(status_code=400, detail="Route braucht mindestens 2 Wegpunkte")
     if len(trip.route) < 2:
-        raise HTTPException(status_code=400, detail="Route braucht mindestens 2 Punkte")
+        raise HTTPException(status_code=400, detail="Es liegt keine berechnete Route vor")
 
-    distanz = round(_distanz_gesamt_km(trip.route), 2)
+    distanz = trip.distanz_km if trip.distanz_km is not None else round(_distanz_gesamt_km(trip.route), 2)
+
     conn = get_connection()
     cur = conn.execute(
         """INSERT INTO trips (titel, datum, start_name, ziel_name, distanz_km, route_geojson, erstellt_am)
@@ -71,7 +80,7 @@ def trip_anlegen(trip: TripCreate):
             trip.start_name,
             trip.ziel_name,
             distanz,
-            json.dumps(trip.route),
+            json.dumps({"waypoints": trip.waypoints, "route": trip.route}),
             int(time.time()),
         ),
     )
