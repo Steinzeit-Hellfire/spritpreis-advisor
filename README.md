@@ -27,7 +27,7 @@ python -m app.database
 
 ## Deine Stationen eintragen
 
-Erst die Tankerkönig-IDs von Shell Lemgo und Shell Bad Salzuflen finden:
+Erst die Tankerkönig-IDs von Shell finden:
 
 ```bash
 python find_stations.py 52.0286 8.8996 --radius 5   # Lemgo
