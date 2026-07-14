@@ -47,7 +47,7 @@ async function ladeTankvorgaenge() {
   const eintraege = await res.json();
 
   if (!eintraege.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="leer">Noch keine Tankvorgänge eingetragen.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="leer">Noch keine Tankvorgänge eingetragen.</td></tr>`;
     return;
   }
 
@@ -61,6 +61,9 @@ async function ladeTankvorgaenge() {
       <td class="zahl">${e.gesamtkosten.toFixed(2)} €</td>
       <td class="zahl">${e.verbrauch_l_100km ?? "–"}</td>
       <td class="zahl">${e.kosten_pro_km ?? "–"}</td>
+      <td class="zahl">${e.bordcomputer_km ?? "–"}</td>
+      <td class="zahl">${e.bordcomputer_verbrauch ?? "–"}</td>
+      <td>${e.foto_pfad ? `<a href="${e.foto_pfad}" target="_blank">📷</a>` : "–"}</td>
     </tr>
   `).join("");
 }
@@ -73,12 +76,23 @@ document.getElementById("refuel-form").addEventListener("submit", async (ev) => 
     odometer_km: Number(document.getElementById("f-km").value),
     liter: Number(document.getElementById("f-liter").value),
     preis_pro_liter: Number(document.getElementById("f-preis").value),
+    bordcomputer_km: document.getElementById("f-bc-km").value ? Number(document.getElementById("f-bc-km").value) : null,
+    bordcomputer_verbrauch: document.getElementById("f-bc-verbrauch").value ? Number(document.getElementById("f-bc-verbrauch").value) : null,
   };
-  await fetch(`${API}/refuels`, {
+  const res = await fetch(`${API}/refuels`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  const { id } = await res.json();
+
+  const fotoInput = document.getElementById("f-foto");
+  if (fotoInput.files.length) {
+    const formData = new FormData();
+    formData.append("datei", fotoInput.files[0]);
+    await fetch(`${API}/refuels/${id}/foto`, { method: "POST", body: formData });
+  }
+
   ev.target.reset();
   ladeTankvorgaenge();
 });

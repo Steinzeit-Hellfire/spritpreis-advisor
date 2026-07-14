@@ -138,6 +138,9 @@ document.getElementById("trip-form").addEventListener("submit", async (ev) => {
   const payload = {
     titel: document.getElementById("t-titel").value || null,
     datum: document.getElementById("t-datum").value || null,
+    kommentar: document.getElementById("t-kommentar").value || null,
+    begleitung: document.getElementById("t-begleitung").value || null,
+    fahrtzweck: document.getElementById("t-zweck").value || null,
     waypoints: wegpunkte.map(w => [w.lat, w.lng]),
     route: letzteRoute.coordinates,
     distanz_km: Math.round(letzteRoute.distanzKm * 10) / 10,
@@ -167,12 +170,14 @@ async function ladeTrips() {
 
   container.innerHTML = `
     <table>
-      <thead><tr><th>Titel</th><th>Datum</th><th class="zahl">Distanz</th><th></th></tr></thead>
+      <thead><tr><th>Titel</th><th>Datum</th><th>Zweck</th><th>Begleitung</th><th class="zahl">Distanz</th><th></th></tr></thead>
       <tbody>
         ${trips.map(t => `
           <tr>
             <td>${t.titel ?? "–"}</td>
-            <td>${t.datum ?? "–"}</td>
+            <td>${t.datum ? t.datum.replace("T", " ") : "–"}</td>
+            <td>${t.fahrtzweck ?? "–"}</td>
+            <td>${t.begleitung ?? "–"}</td>
             <td class="zahl">${t.distanz_km ?? "–"} km</td>
             <td><button class="secondary" data-id="${t.id}">Auf Karte zeigen</button></td>
           </tr>

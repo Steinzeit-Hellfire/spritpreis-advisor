@@ -28,5 +28,9 @@ def on_startup():
 
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
+UPLOADS_DIR = Path(settings.db_path).resolve().parent / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

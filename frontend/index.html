@@ -39,6 +39,15 @@
       <label>Preis/Liter (€)
         <input type="number" step="0.001" id="f-preis" required>
       </label>
+      <label>Bordcomputer: gefahrene km
+        <input type="number" step="0.1" id="f-bc-km" placeholder="optional">
+      </label>
+      <label>Bordcomputer: Ø-Verbrauch (L/100km)
+        <input type="number" step="0.1" id="f-bc-verbrauch" placeholder="optional">
+      </label>
+      <label>Foto (Bordcomputer/Beleg)
+        <input type="file" id="f-foto" accept="image/*">
+      </label>
       <label style="justify-content:flex-end;">
         <button type="submit">Eintragen</button>
       </label>
@@ -54,6 +63,7 @@
           <th class="zahl">km-Stand</th><th class="zahl">Liter</th>
           <th class="zahl">€/L</th><th class="zahl">Gesamt</th>
           <th class="zahl">L/100km</th><th class="zahl">€/km</th>
+          <th class="zahl">BC km</th><th class="zahl">BC L/100km</th><th>Foto</th>
         </tr>
       </thead>
       <tbody></tbody>

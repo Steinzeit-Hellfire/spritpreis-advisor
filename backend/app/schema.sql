@@ -24,23 +24,29 @@ CREATE INDEX IF NOT EXISTS idx_fuel_prices_station_time ON fuel_prices(station_i
 CREATE TABLE IF NOT EXISTS refuels (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     station_id INTEGER REFERENCES stations(id),
-    datum TEXT NOT NULL,           -- ISO-Datum, z.B. 2026-07-14
+    datum TEXT NOT NULL,                    -- ISO-Datum, z.B. 2026-07-14
     odometer_km REAL NOT NULL,
     liter REAL NOT NULL,
     preis_pro_liter REAL NOT NULL,
     gesamtkosten REAL,
-    notiz TEXT
+    notiz TEXT,
+    bordcomputer_km REAL,                   -- vom Bordcomputer: gefahrene km seit letztem Tanken
+    bordcomputer_verbrauch REAL,            -- vom Bordcomputer: Durchschnittsverbrauch L/100km
+    foto_pfad TEXT                          -- Pfad zum hochgeladenen Beleg-/Bordcomputer-Foto
 );
 
 CREATE TABLE IF NOT EXISTS trips (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     titel TEXT,
-    datum TEXT,
+    datum TEXT,                    -- ISO-Datetime, z.B. 2026-07-14T18:30
     start_name TEXT,
     ziel_name TEXT,
     distanz_km REAL,
-    route_geojson TEXT NOT NULL,   -- JSON-Liste von [lat, lng]-Punkten (per Hand/Pins gesetzt)
+    route_geojson TEXT NOT NULL,   -- JSON: {"waypoints": [...], "route": [...]}
     hoehenmeter_auf REAL,          -- für später: Elevation-API-Anbindung
     hoehenmeter_ab REAL,
+    kommentar TEXT,
+    begleitung TEXT,               -- z.B. "allein", "mit Partner/in"
+    fahrtzweck TEXT,               -- z.B. "Arbeit / Pendeln", "Privat"
     erstellt_am INTEGER NOT NULL
 );

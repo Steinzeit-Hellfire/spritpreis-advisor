@@ -47,8 +47,23 @@
       <label>Titel
         <input type="text" id="t-titel" placeholder="z. B. Lemgo – Bad Salzuflen">
       </label>
-      <label>Datum
-        <input type="date" id="t-datum">
+      <label>Datum &amp; Uhrzeit
+        <input type="datetime-local" id="t-datum">
+      </label>
+      <label>Zweck
+        <input type="text" id="t-zweck" list="zweck-vorschlaege" placeholder="z. B. Arbeit, Privat…">
+        <datalist id="zweck-vorschlaege">
+          <option value="Arbeit / Pendeln">
+          <option value="Privat">
+          <option value="Einkauf">
+          <option value="Sonstiges">
+        </datalist>
+      </label>
+      <label>Begleitung
+        <input type="text" id="t-begleitung" placeholder="z. B. allein, mit Partner/in">
+      </label>
+      <label>Kommentar
+        <input type="text" id="t-kommentar" placeholder="Notizen zur Fahrt">
       </label>
       <label style="justify-content:flex-end;">
         <button type="submit">Strecke speichern</button>

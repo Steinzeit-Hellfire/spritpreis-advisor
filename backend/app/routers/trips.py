@@ -12,12 +12,15 @@ router = APIRouter(prefix="/api/trips", tags=["strecken"])
 
 class TripCreate(BaseModel):
     titel: str | None = None
-    datum: str | None = None
+    datum: str | None = None            # ISO-Datetime, z.B. 2026-07-14T18:30
     start_name: str | None = None
     ziel_name: str | None = None
     waypoints: list[list[float]]        # grobe, vom Nutzer gesetzte/verschobene Pins
     route: list[list[float]]            # dichte, straßenfolgende Punkte (von OSRM)
     distanz_km: float | None = None     # falls vom Frontend (OSRM) mitgeliefert
+    kommentar: str | None = None
+    begleitung: str | None = None       # z.B. "allein", "mit Partner/in"
+    fahrtzweck: str | None = None       # z.B. "Arbeit / Pendeln", "Privat"
 
 
 def _haversine_km(p1: list[float], p2: list[float]) -> float:
@@ -72,8 +75,9 @@ def trip_anlegen(trip: TripCreate):
 
     conn = get_connection()
     cur = conn.execute(
-        """INSERT INTO trips (titel, datum, start_name, ziel_name, distanz_km, route_geojson, erstellt_am)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO trips (titel, datum, start_name, ziel_name, distanz_km, route_geojson,
+                               kommentar, begleitung, fahrtzweck, erstellt_am)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             trip.titel,
             trip.datum,
@@ -81,6 +85,9 @@ def trip_anlegen(trip: TripCreate):
             trip.ziel_name,
             distanz,
             json.dumps({"waypoints": trip.waypoints, "route": trip.route}),
+            trip.kommentar,
+            trip.begleitung,
+            trip.fahrtzweck,
             int(time.time()),
         ),
     )
