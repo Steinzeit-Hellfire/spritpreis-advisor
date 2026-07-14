@@ -37,7 +37,7 @@ function eigenerPinMarker(i, waypoint) {
 
 const routingControl = L.Routing.control({
   waypoints: [],
-  router: L.Routing.osrmv1({ serviceUrl: "https://router.project-osrm.org/route/v1" }),
+  router: L.Routing.osrmv1({ serviceUrl: "https://routing.openstreetmap.de/routed-car/route/v1" }),
   routeWhileDragging: true,
   draggableWaypoints: true,
   addWaypoints: true,       // Ziehen der Linie selbst fügt einen Zwischenpunkt ein
@@ -54,6 +54,13 @@ routingControl.on("routesfound", (ev) => {
     distanzKm: route.summary.totalDistance / 1000,
   };
   distanzAnzeigen();
+});
+
+routingControl.on("routingerror", (ev) => {
+  letzteRoute = null;
+  const anzeige = document.getElementById("distanz-anzeige");
+  anzeige.textContent = "Route konnte nicht berechnet werden (Routing-Dienst nicht erreichbar). Details in der Browser-Konsole (F12).";
+  console.error("Routing-Fehler:", ev.error);
 });
 
 routingControl.on("waypointschanged", (ev) => {
