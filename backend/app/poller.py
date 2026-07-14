@@ -30,7 +30,7 @@ def poll_once() -> int:
         is_open = 1 if info.get("status") == "open" else 0
         preis = info.get("e5")
         conn.execute(
-            "INSERT INTO fuel_prices (station_id, fuel_type, price, is_open, timestamp) "
+            "INSERT OR IGNORE INTO fuel_prices (station_id, fuel_type, price, is_open, timestamp) "
             "VALUES (?, 'e5', ?, ?, ?)",
             (local_id, preis, is_open, now),
         )

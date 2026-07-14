@@ -31,6 +31,16 @@ if __name__ == "__main__":
                 print(f"{tabelle}.{spalte} ({typ}) ergänzt")
             else:
                 print(f"{tabelle}.{spalte} existiert bereits - übersprungen")
+
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_fuel_prices_unique "
+            "ON fuel_prices(station_id, fuel_type, timestamp)"
+        )
+        print("Unique-Index auf fuel_prices ergänzt (verhindert Duplikate beim Import)")
+    except sqlite3.IntegrityError as e:
+        print(f"Konnte Unique-Index nicht anlegen, vermutlich existierende Duplikate: {e}")
+
     conn.commit()
     conn.close()
     print("Migration abgeschlossen.")

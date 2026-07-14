@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS fuel_prices (
     timestamp INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_fuel_prices_station_time ON fuel_prices(station_id, timestamp);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fuel_prices_unique ON fuel_prices(station_id, fuel_type, timestamp);
 
 CREATE TABLE IF NOT EXISTS refuels (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
