@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strecken – Spritpreis-Advisor</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  #karte { margin-bottom: 14px; }
+  .karten-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .karten-toolbar input { flex: 1; min-width: 200px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>⛽ Spritpreis-Advisor</h1>
+  <nav>
+    <a href="index.html">Preise</a>
+    <a href="karte.html" class="active">Strecken</a>
+    <a href="https://acc-dashboard.local" title="Zum ACC-Dashboard">ACC-Dashboard ↗</a>
+  </nav>
+</header>
+
+<main>
+  <div class="section-title">Strecke aufzeichnen</div>
+  <p class="hinweis">
+    Klick auf die Karte setzt einen Pin. Pins lassen sich per Drag&Drop verschieben,
+    um die tatsächlich gefahrene Route nachzuzeichnen – nicht nur die kürzeste Verbindung.
+    Rechtsklick auf einen Pin entfernt ihn wieder.
+  </p>
+  <div class="karten-toolbar">
+    <input type="text" id="ziel-suche" placeholder="Adresse oder Ort suchen…">
+    <button id="btn-suchen" class="secondary" type="button">Suchen</button>
+    <button id="btn-letzten-loeschen" class="secondary" type="button">Letzten Pin entfernen</button>
+    <button id="btn-reset" class="secondary" type="button">Route leeren</button>
+  </div>
+  <div id="karte"></div>
+
+  <div class="section-title">Strecke speichern</div>
+  <div class="glass-card">
+    <form class="eingabe" id="trip-form">
+      <label>Titel
+        <input type="text" id="t-titel" placeholder="z. B. Lemgo – Bad Salzuflen">
+      </label>
+      <label>Datum
+        <input type="date" id="t-datum">
+      </label>
+      <label style="justify-content:flex-end;">
+        <button type="submit">Strecke speichern</button>
+      </label>
+    </form>
+    <p class="hinweis" id="distanz-anzeige"></p>
+  </div>
+
+  <div class="section-title">Gespeicherte Strecken</div>
+  <div id="trips-liste" class="glass-card"><p class="leer">Lade Strecken…</p></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/route-editor.js"></script>
+</body>
+</html>

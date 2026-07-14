@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spritpreis-Advisor</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>⛽ Spritpreis-Advisor</h1>
+  <nav>
+    <a href="index.html" class="active">Preise</a>
+    <a href="karte.html">Strecken</a>
+    <a href="https://acc-dashboard.local" title="Zum ACC-Dashboard">ACC-Dashboard ↗</a>
+  </nav>
+</header>
+
+<main>
+  <div class="section-title">Aktueller Vergleich</div>
+  <div id="stationen-liste"><p class="leer">Lade Preise…</p></div>
+
+  <div class="section-title">Tankvorgang eintragen</div>
+  <div class="glass-card">
+    <form class="eingabe" id="refuel-form">
+      <label>Station
+        <select id="f-station"></select>
+      </label>
+      <label>Datum
+        <input type="date" id="f-datum" required>
+      </label>
+      <label>Kilometerstand
+        <input type="number" step="1" id="f-km" required>
+      </label>
+      <label>Liter
+        <input type="number" step="0.01" id="f-liter" required>
+      </label>
+      <label>Preis/Liter (€)
+        <input type="number" step="0.001" id="f-preis" required>
+      </label>
+      <label style="justify-content:flex-end;">
+        <button type="submit">Eintragen</button>
+      </label>
+    </form>
+  </div>
+
+  <div class="section-title">Tankvorgänge</div>
+  <div class="glass-card">
+    <table id="refuel-table">
+      <thead>
+        <tr>
+          <th>Datum</th><th>Station</th>
+          <th class="zahl">km-Stand</th><th class="zahl">Liter</th>
+          <th class="zahl">€/L</th><th class="zahl">Gesamt</th>
+          <th class="zahl">L/100km</th><th class="zahl">€/km</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+
+<script src="js/dashboard.js"></script>
+</body>
+</html>

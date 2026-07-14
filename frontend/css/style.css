@@ -1,0 +1,176 @@
+:root {
+  --bg-deep: #0b1120;
+  --bg-mid: #121a2e;
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --text-primary: #e8ecf4;
+  --text-muted: #8b93a8;
+  --accent: #38bdf8;
+  --guenstig: #34d399;
+  --ueblich: #fbbf24;
+  --teuer: #f87171;
+  --radius: 18px;
+  --font-body: -apple-system, "Inter", "Segoe UI", sans-serif;
+  --font-data: "SF Mono", "JetBrains Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(56, 189, 248, 0.14), transparent 45%),
+    radial-gradient(circle at 85% 20%, rgba(52, 211, 153, 0.10), transparent 40%),
+    linear-gradient(180deg, var(--bg-deep), var(--bg-mid));
+  background-attachment: fixed;
+}
+
+header.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+}
+
+header.topbar h1 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+header.topbar nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-left: 22px;
+  font-size: 0.92rem;
+  transition: color 0.15s ease;
+}
+header.topbar nav a:hover,
+header.topbar nav a.active { color: var(--text-primary); }
+
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+.glass-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(16px);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+
+.station-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.station-card .info h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.station-card .info p { margin: 0; color: var(--text-muted); font-size: 0.85rem; }
+
+.station-card .preis {
+  font-family: var(--font-data);
+  font-size: 1.6rem;
+  font-weight: 600;
+  min-width: 110px;
+  text-align: right;
+}
+
+.ampel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ampel::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ampel.guenstig { color: var(--guenstig); background: rgba(52, 211, 153, 0.12); }
+.ampel.ueblich  { color: var(--ueblich);  background: rgba(251, 191, 36, 0.12); }
+.ampel.teuer    { color: var(--teuer);    background: rgba(248, 113, 113, 0.12); }
+.ampel.unbekannt{ color: var(--text-muted); background: rgba(255,255,255,0.05); }
+
+.section-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 30px 0 12px;
+}
+
+form.eingabe {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+form.eingabe label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  gap: 6px;
+}
+
+input, select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+}
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+button {
+  background: var(--accent);
+  color: #0b1120;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+button:hover { opacity: 0.88; }
+button.secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--glass-border); }
+th { color: var(--text-muted); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; }
+td.zahl, th.zahl { text-align: right; font-family: var(--font-data); }
+
+#karte {
+  height: 480px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+
+.hinweis { color: var(--text-muted); font-size: 0.85rem; margin-top: 8px; }
+.leer { color: var(--text-muted); text-align: center; padding: 30px 0; }
