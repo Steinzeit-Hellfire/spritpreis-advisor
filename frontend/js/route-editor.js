@@ -2,9 +2,28 @@ const API = "/api";
 
 // Karte zentriert auf Lippe/Dörentrup-Region
 const map = L.map("karte").setView([52.05, 8.85], 11);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+
+const layerOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap-Mitwirkende",
-}).addTo(map);
+  maxZoom: 19,
+});
+
+const layerTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap-Mitwirkende, SRTM | Karte: &copy; OpenTopoMap (CC-BY-SA)",
+  maxZoom: 17,
+});
+
+const layerVoyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+  attribution: "&copy; OpenStreetMap-Mitwirkende &copy; CARTO",
+  maxZoom: 20,
+});
+
+layerOSM.addTo(map);
+L.control.layers(
+  { "OpenStreetMap": layerOSM, "OpenTopoMap": layerTopo, "CartoDB Voyager": layerVoyager },
+  {},
+  { position: "topright" }
+).addTo(map);
 
 let markers = [];    // Leaflet-Marker in Reihenfolge der Pins
 let polyline = null;

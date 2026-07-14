@@ -4,8 +4,15 @@ from .database import get_connection
 
 def get_comparison() -> dict:
     """Vergleicht die aktuellen Preise aller Favoriten-Stationen und gibt für jede
-    eine Einschätzung zurück, ob der Preis gerade günstig ist (verglichen mit dem
-    historischen Schnitt zu dieser Wochentag+Uhrzeit-Kombination).
+    eine Einschätzung zurück, ob der Preis gerade günstig ist.
+
+    Zweistufig, damit von Anfang an eine brauchbare Aussage da ist:
+    1. Sobald an mind. 3 verschiedenen Tagen zur selben Uhrzeit Daten vorliegen
+       (braucht ein paar Tage Laufzeit): Vergleich gegen den Schnitt genau
+       dieser Wochenstunde - das ist die eigentlich aussagekräftige Einschätzung.
+    2. Bis dahin: Vergleich gegen den bisherigen Gesamtschnitt der Station
+       (braucht nur 3 Datenpunkte, also ~15 Minuten Laufzeit) - grob, aber
+       besser als "keine Historie".
     """
     conn = get_connection()
 
@@ -22,33 +29,50 @@ def get_comparison() -> dict:
         """
     ).fetchall()
 
-    jetzt = datetime.now()
-    stunde = f"{jetzt.hour:02d}"
-    wochentag = str(jetzt.weekday())  # 0=Montag ... via strftime('%w') ist 0=Sonntag, siehe unten
+    stunde = f"{datetime.now().hour:02d}"
 
     ergebnisse = []
     for row in aktuelle_preise:
-        stat = conn.execute(
+        # Feinere Statistik: gleiche Uhrzeit, aber nur wenn Daten von mehreren
+        # verschiedenen Tagen vorliegen (sonst ist "Durchschnitt" nur der
+        # heutige Wert selbst und damit bedeutungslos).
+        stunden_stat = conn.execute(
             """
-            SELECT AVG(price) AS avg_price, MIN(price) AS min_price, COUNT(*) AS n
+            SELECT AVG(price) AS avg_price,
+                   COUNT(DISTINCT date(timestamp, 'unixepoch')) AS tage
             FROM fuel_prices
-            WHERE station_id = ?
-              AND is_open = 1
-              AND strftime('%w', datetime(timestamp, 'unixepoch')) = strftime('%w', 'now')
+            WHERE station_id = ? AND is_open = 1
               AND strftime('%H', datetime(timestamp, 'unixepoch')) = ?
             """,
             (row["id"], stunde),
         ).fetchone()
 
-        avg_price = stat["avg_price"]
-        genug_daten = (stat["n"] or 0) >= 5  # erst ab 5 Datenpunkten wird die Einschätzung aussagekräftig
+        # Grobe Statistik: einfach alle bisherigen Preise dieser Station.
+        gesamt_stat = conn.execute(
+            """
+            SELECT AVG(price) AS avg_price, COUNT(*) AS n
+            FROM fuel_prices
+            WHERE station_id = ? AND is_open = 1
+            """,
+            (row["id"],),
+        ).fetchone()
 
-        if not genug_daten or avg_price is None:
-            status = "noch keine ausreichende Historie für diese Uhrzeit"
-        elif row["price"] <= avg_price - 0.01:
-            status = "günstig - jetzt tanken"
-        elif row["price"] >= avg_price + 0.02:
-            status = "teurer als üblich - eher warten"
+        if stunden_stat["tage"] and stunden_stat["tage"] >= 3:
+            vergleichswert = stunden_stat["avg_price"]
+            basis = f"Schnitt dieser Uhrzeit (Daten von {stunden_stat['tage']} Tagen)"
+        elif gesamt_stat["n"] and gesamt_stat["n"] >= 3:
+            vergleichswert = gesamt_stat["avg_price"]
+            basis = "bisheriger Gesamtschnitt (noch wenig Historie)"
+        else:
+            vergleichswert = None
+            basis = None
+
+        if vergleichswert is None:
+            status = "sammle noch Daten…"
+        elif row["price"] <= vergleichswert - 0.01:
+            status = "günstig"
+        elif row["price"] >= vergleichswert + 0.02:
+            status = "teurer als üblich"
         else:
             status = "im üblichen Bereich"
 
@@ -60,7 +84,8 @@ def get_comparison() -> dict:
                 "adresse": row["adresse"],
                 "aktueller_preis": row["price"],
                 "geoeffnet": bool(row["is_open"]),
-                "durchschnitt_diese_uhrzeit": round(avg_price, 3) if avg_price else None,
+                "vergleichswert": round(vergleichswert, 3) if vergleichswert else None,
+                "basis": basis,
                 "status": status,
             }
         )

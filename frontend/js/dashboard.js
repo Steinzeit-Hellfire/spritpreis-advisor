@@ -24,6 +24,7 @@ async function ladePreisvergleich() {
           <h3>${s.marke ? s.marke + " – " : ""}${s.name}</h3>
           <p>${s.adresse ?? ""}</p>
           <span class="ampel ${ampelKlasse(s.status)}">${s.status}</span>
+          ${s.basis ? `<p class="hinweis" style="margin-top:6px;">${s.basis}</p>` : ""}
         </div>
         <div class="preis">${s.aktueller_preis != null ? s.aktueller_preis.toFixed(3) + " €" : "–"}</div>
       </div>

@@ -174,3 +174,13 @@ td.zahl, th.zahl { text-align: right; font-family: var(--font-data); }
 
 .hinweis { color: var(--text-muted); font-size: 0.85rem; margin-top: 8px; }
 .leer { color: var(--text-muted); text-align: center; padding: 30px 0; }
+
+.leaflet-control-layers {
+  background: rgba(18, 26, 46, 0.92) !important;
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 10px !important;
+  backdrop-filter: blur(12px);
+}
+.leaflet-control-layers-toggle { filter: invert(1) hue-rotate(180deg); }
+.leaflet-control-layers label { color: var(--text-primary); }
