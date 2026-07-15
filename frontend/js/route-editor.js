@@ -170,9 +170,11 @@ async function ladeTrips() {
 
   container.innerHTML = `
     <table>
-      <thead><tr><th>Titel</th><th>Datum</th><th>Zweck</th><th>Begleitung</th><th class="zahl">Distanz</th><th></th></tr></thead>
+      <thead><tr><th>Titel</th><th>Datum</th><th>Zweck</th><th>Begleitung</th><th class="zahl">Distanz</th><th></th><th></th></tr></thead>
       <tbody>
-        ${trips.map(t => `
+        ${trips.map(t => {
+          const ziel = t.route && t.route.length ? t.route[t.route.length - 1] : null;
+          return `
           <tr>
             <td>${t.titel ?? "–"}</td>
             <td>${t.datum ? t.datum.replace("T", " ") : "–"}</td>
@@ -180,8 +182,10 @@ async function ladeTrips() {
             <td>${t.begleitung ?? "–"}</td>
             <td class="zahl">${t.distanz_km ?? "–"} km</td>
             <td><button class="secondary" data-id="${t.id}">Auf Karte zeigen</button></td>
+            <td>${ziel ? `<a href="https://waze.com/ul?ll=${ziel[0]}%2C${ziel[1]}&navigate=yes" target="_blank" class="waze-link">🧭 Waze</a>` : ""}</td>
           </tr>
-        `).join("")}
+        `;
+        }).join("")}
       </tbody>
     </table>
   `;

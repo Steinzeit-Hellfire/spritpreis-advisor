@@ -21,4 +21,5 @@ if __name__ == "__main__":
 
     for s in stationen:
         print(f"{s['id']}  |  {s.get('brand', '?'):10s}  |  {s.get('name', '')}  |  "
-              f"{s.get('street', '')} {s.get('houseNumber', '')}  |  {s.get('dist')} km")
+              f"{s.get('street', '')} {s.get('houseNumber', '')}  |  {s.get('dist')} km  |  "
+              f"lat={s.get('lat')} lng={s.get('lng')}")

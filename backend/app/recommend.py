@@ -18,7 +18,7 @@ def get_comparison() -> dict:
 
     aktuelle_preise = conn.execute(
         """
-        SELECT s.id, s.name, s.marke, s.adresse, fp.price, fp.is_open, fp.timestamp
+        SELECT s.id, s.name, s.marke, s.adresse, s.lat, s.lng, fp.price, fp.is_open, fp.timestamp
         FROM stations s
         JOIN fuel_prices fp ON fp.station_id = s.id
         WHERE s.ist_favorit = 1
@@ -82,6 +82,8 @@ def get_comparison() -> dict:
                 "name": row["name"],
                 "marke": row["marke"],
                 "adresse": row["adresse"],
+                "lat": row["lat"],
+                "lng": row["lng"],
                 "aktueller_preis": row["price"],
                 "geoeffnet": bool(row["is_open"]),
                 "vergleichswert": round(vergleichswert, 3) if vergleichswert else None,

@@ -184,3 +184,14 @@ td.zahl, th.zahl { text-align: right; font-family: var(--font-data); }
 }
 .leaflet-control-layers-toggle { filter: invert(1) hue-rotate(180deg); }
 .leaflet-control-layers label { color: var(--text-primary); }
+
+.waze-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #33ccff;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.waze-link:hover { text-decoration: underline; }

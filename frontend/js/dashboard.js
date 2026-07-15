@@ -7,6 +7,11 @@ function ampelKlasse(status) {
   return "unbekannt";
 }
 
+function wazeLink(lat, lng) {
+  if (lat == null || lng == null) return "";
+  return `<a href="https://waze.com/ul?ll=${lat}%2C${lng}&navigate=yes" target="_blank" class="waze-link">🧭 In Waze navigieren</a>`;
+}
+
 async function ladePreisvergleich() {
   const container = document.getElementById("stationen-liste");
   try {
@@ -25,6 +30,7 @@ async function ladePreisvergleich() {
           <p>${s.adresse ?? ""}</p>
           <span class="ampel ${ampelKlasse(s.status)}">${s.status}</span>
           ${s.basis ? `<p class="hinweis" style="margin-top:6px;">${s.basis}</p>` : ""}
+          ${s.lat != null ? `<p style="margin-top:8px;">${wazeLink(s.lat, s.lng)}</p>` : ""}
         </div>
         <div class="preis">${s.aktueller_preis != null ? s.aktueller_preis.toFixed(3) + " €" : "–"}</div>
       </div>

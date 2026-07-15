@@ -59,6 +59,25 @@ def station_anlegen(station: StationCreate):
     return {"id": neue_id}
 
 
+class StationKoordinaten(BaseModel):
+    lat: float
+    lng: float
+
+
+@router.patch("/stations/{station_id}/koordinaten")
+def station_koordinaten_setzen(station_id: int, koordinaten: StationKoordinaten):
+    conn = get_connection()
+    cur = conn.execute(
+        "UPDATE stations SET lat = ?, lng = ? WHERE id = ?",
+        (koordinaten.lat, koordinaten.lng, station_id),
+    )
+    conn.commit()
+    conn.close()
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Station nicht gefunden")
+    return {"ok": True}
+
+
 @router.get("/stations/suche")
 def stationen_suche(lat: float, lng: float, radius_km: int = 10):
     """Sucht Tankstellen in der Nähe über Tankerkönig, um deren ID herauszufinden
