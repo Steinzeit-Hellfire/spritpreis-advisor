@@ -20,7 +20,7 @@ def login(daten: LoginRequest, response: Response):
             status_code=500,
             detail="ADMIN_PASSWORD/SESSION_SECRET sind auf dem Server nicht konfiguriert (.env prüfen).",
         )
-    if not hmac.compare_digest(daten.passwort, settings.admin_password):
+    if not hmac.compare_digest(daten.passwort.encode("utf-8"), settings.admin_password.encode("utf-8")):
         raise HTTPException(status_code=401, detail="Falsches Passwort")
 
     token = erstelle_session_token(settings.session_secret)

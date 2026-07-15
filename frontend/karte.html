@@ -84,7 +84,11 @@
       <p class="hinweis" style="margin-top:0;">Strecken sind standardmäßig privat. Als Admin siehst und verwaltest du alle.</p>
       <form class="eingabe" id="login-form">
         <label>Admin-Passwort
-          <input type="password" id="login-passwort" required>
+          <span style="position:relative; display:flex; align-items:center;">
+            <input type="password" id="login-passwort" required style="padding-right:38px;">
+            <button type="button" id="btn-passwort-toggle" class="secondary"
+                    style="position:absolute; right:2px; padding:4px 8px; font-size:0.8rem;">👁</button>
+          </span>
         </label>
         <label style="justify-content:flex-end;">
           <button type="submit">Anmelden</button>

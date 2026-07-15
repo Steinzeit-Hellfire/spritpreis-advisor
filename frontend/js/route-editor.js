@@ -301,6 +301,14 @@ async function pruefeAdminStatus() {
   adminUIAktualisieren();
 }
 
+document.getElementById("btn-passwort-toggle").addEventListener("click", () => {
+  const feld = document.getElementById("login-passwort");
+  const btn = document.getElementById("btn-passwort-toggle");
+  const sichtbar = feld.type === "text";
+  feld.type = sichtbar ? "password" : "text";
+  btn.textContent = sichtbar ? "👁" : "🙈";
+});
+
 document.getElementById("login-form").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const passwort = document.getElementById("login-passwort").value;
