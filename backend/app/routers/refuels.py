@@ -1,11 +1,12 @@
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Request
 from pydantic import BaseModel
 
 from ..database import get_connection
 from ..config import settings
+from ..auth import ist_admin
 
 router = APIRouter(prefix="/api/refuels", tags=["tankvorgaenge"])
 
@@ -13,26 +14,33 @@ UPLOAD_DIR = Path(settings.db_path).resolve().parent / "uploads" / "refuels"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _require_admin(request: Request):
+    if not ist_admin(request):
+        raise HTTPException(status_code=401, detail="Nur als Admin möglich - bitte einloggen.")
+
+
 class RefuelCreate(BaseModel):
     station_id: int | None = None
+    fahrer_id: int | None = None
     datum: str  # ISO, z.B. "2026-07-14"
     odometer_km: float
     liter: float
     preis_pro_liter: float
     notiz: str | None = None
-    bordcomputer_km: float | None = None         # vom Bordcomputer: gefahrene km seit letztem Tanken
-    bordcomputer_verbrauch: float | None = None   # vom Bordcomputer: Durchschnittsverbrauch L/100km
+    bordcomputer_km: float | None = None
+    bordcomputer_verbrauch: float | None = None
 
 
 @router.get("")
-def refuels_liste():
-    """Liste aller Tankvorgänge, jeweils mit Verbrauch (L/100km) und Kosten/km
-    seit dem vorherigen Tankvorgang."""
+def refuels_liste(request: Request):
+    """Nur für Admin sichtbar - Tankvorgänge sind privat."""
+    _require_admin(request)
     conn = get_connection()
     rows = conn.execute(
-        """SELECT r.*, s.name AS station_name, s.marke AS station_marke
+        """SELECT r.*, s.name AS station_name, s.marke AS station_marke, f.name AS fahrer_name
            FROM refuels r
            LEFT JOIN stations s ON s.id = r.station_id
+           LEFT JOIN fahrer f ON f.id = r.fahrer_id
            ORDER BY r.odometer_km ASC"""
     ).fetchall()
     conn.close()
@@ -55,19 +63,21 @@ def refuels_liste():
         ergebnisse.append(eintrag)
         vorheriger_km = row["odometer_km"]
 
-    return list(reversed(ergebnisse))  # neuestes zuerst
+    return list(reversed(ergebnisse))
 
 
 @router.post("")
-def refuel_anlegen(eintrag: RefuelCreate):
+def refuel_anlegen(eintrag: RefuelCreate, request: Request):
+    _require_admin(request)
     gesamtkosten = round(eintrag.liter * eintrag.preis_pro_liter, 2)
     conn = get_connection()
     cur = conn.execute(
-        """INSERT INTO refuels (station_id, datum, odometer_km, liter, preis_pro_liter, gesamtkosten,
-                                 notiz, bordcomputer_km, bordcomputer_verbrauch)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO refuels (station_id, fahrer_id, datum, odometer_km, liter, preis_pro_liter,
+                                 gesamtkosten, notiz, bordcomputer_km, bordcomputer_verbrauch)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             eintrag.station_id,
+            eintrag.fahrer_id,
             eintrag.datum,
             eintrag.odometer_km,
             eintrag.liter,
@@ -85,7 +95,8 @@ def refuel_anlegen(eintrag: RefuelCreate):
 
 
 @router.post("/{refuel_id}/foto")
-async def foto_hochladen(refuel_id: int, datei: UploadFile = File(...)):
+async def foto_hochladen(refuel_id: int, request: Request, datei: UploadFile = File(...)):
+    _require_admin(request)
     conn = get_connection()
     vorhanden = conn.execute("SELECT id FROM refuels WHERE id = ?", (refuel_id,)).fetchone()
     if vorhanden is None:
@@ -107,7 +118,8 @@ async def foto_hochladen(refuel_id: int, datei: UploadFile = File(...)):
 
 
 @router.delete("/{refuel_id}")
-def refuel_loeschen(refuel_id: int):
+def refuel_loeschen(refuel_id: int, request: Request):
+    _require_admin(request)
     conn = get_connection()
     cur = conn.execute("DELETE FROM refuels WHERE id = ?", (refuel_id,))
     conn.commit()

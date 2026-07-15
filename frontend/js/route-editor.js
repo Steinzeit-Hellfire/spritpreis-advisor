@@ -281,6 +281,97 @@ async function tripAufKarteLaden(tripId) {
   }
 }
 
+// --- Routen-Vorlagen (wiederkehrende Strecken wie "Arbeitsweg Hin/Zurück") --
+
+let aktuelleVorlageId = null;
+
+async function ladeVorlagenDropdown() {
+  if (!istAdmin) return;
+  const select = document.getElementById("vorlage-auswahl");
+  const res = await fetch(`${API}/routen-vorlagen`);
+  if (!res.ok) return;
+  const vorlagen = await res.json();
+  select.innerHTML = `<option value="">– Vorlage laden –</option>` +
+    vorlagen.map(v => `<option value="${v.id}">${v.name}</option>`).join("");
+}
+
+document.getElementById("vorlage-auswahl").addEventListener("change", async (ev) => {
+  const id = ev.target.value;
+  const aktualisierenBtn = document.getElementById("btn-vorlage-aktualisieren");
+  const loeschenBtn = document.getElementById("btn-vorlage-loeschen");
+
+  if (!id) {
+    aktuelleVorlageId = null;
+    aktualisierenBtn.style.display = "none";
+    loeschenBtn.style.display = "none";
+    return;
+  }
+
+  const res = await fetch(`${API}/routen-vorlagen`);
+  const vorlagen = await res.json();
+  const vorlage = vorlagen.find(v => String(v.id) === id);
+  if (!vorlage) return;
+
+  aktuelleVorlageId = vorlage.id;
+  wegpunkte = vorlage.waypoints.map(([lat, lng]) => L.latLng(lat, lng));
+  routingControl.setWaypoints(wegpunkte);
+  if (wegpunkte.length) map.fitBounds(L.latLngBounds(wegpunkte));
+
+  aktualisierenBtn.style.display = "";
+  loeschenBtn.style.display = "";
+});
+
+document.getElementById("btn-vorlage-speichern").addEventListener("click", async () => {
+  if (wegpunkte.length < 2 || !letzteRoute) {
+    alert("Erst eine Route mit mindestens 2 Wegpunkten anlegen.");
+    return;
+  }
+  const name = prompt("Name für diese Vorlage (z. B. \"Arbeitsweg Hin\"):");
+  if (!name) return;
+
+  const res = await fetch(`${API}/routen-vorlagen`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      waypoints: wegpunkte.map(w => [w.lat, w.lng]),
+      route: letzteRoute.coordinates,
+      distanz_km: Math.round(letzteRoute.distanzKm * 10) / 10,
+    }),
+  });
+  if (res.status === 401) { alert("Nur als Admin möglich."); return; }
+  ladeVorlagenDropdown();
+});
+
+document.getElementById("btn-vorlage-aktualisieren").addEventListener("click", async () => {
+  if (!aktuelleVorlageId || !letzteRoute) return;
+  const select = document.getElementById("vorlage-auswahl");
+  const bisherigerName = select.options[select.selectedIndex].textContent;
+  const name = prompt("Name der Vorlage:", bisherigerName) || bisherigerName;
+
+  await fetch(`${API}/routen-vorlagen/${aktuelleVorlageId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      waypoints: wegpunkte.map(w => [w.lat, w.lng]),
+      route: letzteRoute.coordinates,
+      distanz_km: Math.round(letzteRoute.distanzKm * 10) / 10,
+    }),
+  });
+  ladeVorlagenDropdown();
+});
+
+document.getElementById("btn-vorlage-loeschen").addEventListener("click", async () => {
+  if (!aktuelleVorlageId) return;
+  if (!confirm("Diese Vorlage wirklich löschen?")) return;
+  await fetch(`${API}/routen-vorlagen/${aktuelleVorlageId}`, { method: "DELETE" });
+  aktuelleVorlageId = null;
+  document.getElementById("btn-vorlage-aktualisieren").style.display = "none";
+  document.getElementById("btn-vorlage-loeschen").style.display = "none";
+  ladeVorlagenDropdown();
+});
+
 // --- Admin-Login ---------------------------------------------------------
 
 function adminUIAktualisieren() {
@@ -288,6 +379,7 @@ function adminUIAktualisieren() {
   document.getElementById("admin-hinweis").style.display = istAdmin ? "none" : "";
   document.getElementById("login-form-bereich").style.display = istAdmin ? "none" : "";
   document.getElementById("logout-bereich").style.display = istAdmin ? "" : "none";
+  document.getElementById("vorlagen-toolbar").style.display = istAdmin ? "" : "none";
 }
 
 async function pruefeAdminStatus() {
@@ -331,6 +423,7 @@ document.getElementById("login-form").addEventListener("submit", async (ev) => {
   istAdmin = true;
   adminUIAktualisieren();
   ladeTrips();
+  ladeVorlagenDropdown();
 });
 
 document.getElementById("btn-logout").addEventListener("click", async () => {
@@ -346,6 +439,7 @@ document.getElementById("btn-logout").addEventListener("click", async () => {
   await pruefeAdminStatus();
   distanzAnzeigen();
   await ladeTrips();
+  ladeVorlagenDropdown();
   meinStandort = await standortAnfordern();
   if (meinStandort) ladeTrips(); // ETA nachladen, sobald Standort da ist
 })();

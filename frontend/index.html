@@ -22,8 +22,15 @@
   <div id="stationen-liste"><p class="leer">Lade Preise…</p></div>
 
   <div class="section-title">Tankvorgang eintragen</div>
-  <div class="glass-card">
+  <p class="hinweis" id="refuel-admin-hinweis" style="display:none;">
+    Tankvorgänge sind privat und nur für den Admin sichtbar. Bitte auf der
+    <a href="karte.html">Strecken-Seite</a> einloggen.
+  </p>
+  <div class="glass-card" id="refuel-form-card">
     <form class="eingabe" id="refuel-form">
+      <label>Fahrer
+        <select id="f-fahrer"></select>
+      </label>
       <label>Station
         <select id="f-station"></select>
       </label>
@@ -52,14 +59,25 @@
         <button type="submit">Eintragen</button>
       </label>
     </form>
+    <details style="margin-top:14px;">
+      <summary class="hinweis" style="cursor:pointer;">Neuen Fahrer anlegen</summary>
+      <form class="eingabe" id="fahrer-form" style="margin-top:10px;">
+        <label>Name
+          <input type="text" id="neuer-fahrer-name" required placeholder="z. B. Partner/in">
+        </label>
+        <label style="justify-content:flex-end;">
+          <button type="submit" class="secondary">Fahrer hinzufügen</button>
+        </label>
+      </form>
+    </details>
   </div>
 
   <div class="section-title">Tankvorgänge</div>
-  <div class="glass-card">
+  <div class="glass-card" id="refuel-table-card">
     <table id="refuel-table">
       <thead>
         <tr>
-          <th>Datum</th><th>Station</th>
+          <th>Datum</th><th>Fahrer</th><th>Station</th>
           <th class="zahl">km-Stand</th><th class="zahl">Liter</th>
           <th class="zahl">€/L</th><th class="zahl">Gesamt</th>
           <th class="zahl">L/100km</th><th class="zahl">€/km</th>

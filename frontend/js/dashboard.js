@@ -1,4 +1,18 @@
 const API = "/api";
+let istAdmin = false;
+
+async function pruefeAdminStatus() {
+  try {
+    const res = await fetch(`${API}/auth/status`);
+    const data = await res.json();
+    istAdmin = !!data.admin;
+  } catch (e) {
+    istAdmin = false;
+  }
+  document.getElementById("refuel-form-card").style.display = istAdmin ? "" : "none";
+  document.getElementById("refuel-table-card").style.display = istAdmin ? "" : "none";
+  document.getElementById("refuel-admin-hinweis").style.display = istAdmin ? "none" : "";
+}
 
 function ampelKlasse(status) {
   if (status.includes("günstig")) return "guenstig";
@@ -100,19 +114,47 @@ async function ladeStationenDropdown() {
   }).join("");
 }
 
+async function ladeFahrerDropdown() {
+  if (!istAdmin) return;
+  const select = document.getElementById("f-fahrer");
+  const res = await fetch(`${API}/fahrer`);
+  if (!res.ok) return;
+  const fahrerListe = await res.json();
+  select.innerHTML = `<option value="">– kein Fahrer angegeben –</option>` +
+    fahrerListe.map(f => `<option value="${f.id}">${f.name}</option>`).join("");
+}
+
+document.getElementById("fahrer-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const nameFeld = document.getElementById("neuer-fahrer-name");
+  await fetch(`${API}/fahrer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: nameFeld.value }),
+  });
+  nameFeld.value = "";
+  ladeFahrerDropdown();
+});
+
 async function ladeTankvorgaenge() {
+  if (!istAdmin) return;
   const tbody = document.querySelector("#refuel-table tbody");
   const res = await fetch(`${API}/refuels`);
+  if (res.status === 401) {
+    tbody.innerHTML = `<tr><td colspan="12" class="leer">Nur für Admin sichtbar.</td></tr>`;
+    return;
+  }
   const eintraege = await res.json();
 
   if (!eintraege.length) {
-    tbody.innerHTML = `<tr><td colspan="11" class="leer">Noch keine Tankvorgänge eingetragen.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="leer">Noch keine Tankvorgänge eingetragen.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = eintraege.map(e => `
     <tr>
       <td>${e.datum}</td>
+      <td>${e.fahrer_name ?? "–"}</td>
       <td>${e.station_name ?? "–"}</td>
       <td class="zahl">${e.odometer_km}</td>
       <td class="zahl">${e.liter.toFixed(2)}</td>
@@ -131,6 +173,7 @@ document.getElementById("refuel-form").addEventListener("submit", async (ev) => 
   ev.preventDefault();
   const payload = {
     station_id: Number(document.getElementById("f-station").value) || null,
+    fahrer_id: document.getElementById("f-fahrer").value ? Number(document.getElementById("f-fahrer").value) : null,
     datum: document.getElementById("f-datum").value,
     odometer_km: Number(document.getElementById("f-km").value),
     liter: Number(document.getElementById("f-liter").value),
@@ -143,6 +186,10 @@ document.getElementById("refuel-form").addEventListener("submit", async (ev) => 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  if (res.status === 401) {
+    alert("Nur als Admin möglich - bitte auf der Strecken-Seite einloggen.");
+    return;
+  }
   const { id } = await res.json();
 
   const fotoInput = document.getElementById("f-foto");
@@ -158,10 +205,12 @@ document.getElementById("refuel-form").addEventListener("submit", async (ev) => 
 
 ladePreisvergleich();
 ladeStationenDropdown();
-ladeTankvorgaenge();
 setInterval(ladePreisvergleich, 60_000); // Ansicht minütlich auffrischen
 
 (async () => {
+  await pruefeAdminStatus();
+  ladeFahrerDropdown();
+  ladeTankvorgaenge();
   meinStandort = await standortAnfordern();
   if (meinStandort) ladePreisvergleich(); // ETA nachladen, sobald Standort da ist
 })();

@@ -32,12 +32,22 @@
     über echte Straßen berechnet (nicht Luftlinie). Pins lassen sich per Drag&Drop
     verschieben, um die tatsächlich gefahrene Strecke nachzubilden, z. B. wenn du
     einen Umweg gefahren bist. Rechtsklick auf einen Pin entfernt ihn wieder.
+    Wiederkehrende Strecken (z. B. Arbeitsweg) kannst du unten als Vorlage speichern
+    und beim nächsten Mal einfach laden, statt neu zu klicken.
   </p>
   <div class="karten-toolbar">
     <input type="text" id="ziel-suche" placeholder="Adresse oder Ort suchen…">
     <button id="btn-suchen" class="secondary" type="button">Suchen</button>
     <button id="btn-letzten-loeschen" class="secondary" type="button">Letzten Pin entfernen</button>
     <button id="btn-reset" class="secondary" type="button">Route leeren</button>
+  </div>
+  <div class="karten-toolbar" id="vorlagen-toolbar" style="display:none;">
+    <select id="vorlage-auswahl" style="flex:1; min-width:200px;">
+      <option value="">– Vorlage laden –</option>
+    </select>
+    <button id="btn-vorlage-speichern" class="secondary" type="button">Aktuelle Route als Vorlage speichern</button>
+    <button id="btn-vorlage-aktualisieren" class="secondary" type="button" style="display:none;">Geladene Vorlage aktualisieren</button>
+    <button id="btn-vorlage-loeschen" class="secondary" type="button" style="display:none;">Vorlage löschen</button>
   </div>
   <div id="karte"></div>
 

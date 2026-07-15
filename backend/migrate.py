@@ -13,6 +13,7 @@ NEUE_SPALTEN = {
         ("bordcomputer_km", "REAL"),
         ("bordcomputer_verbrauch", "REAL"),
         ("foto_pfad", "TEXT"),
+        ("fahrer_id", "INTEGER REFERENCES fahrer(id)"),
     ],
     "trips": [
         ("kommentar", "TEXT"),
@@ -22,8 +23,27 @@ NEUE_SPALTEN = {
     ],
 }
 
+NEUE_TABELLEN = """
+CREATE TABLE IF NOT EXISTS fahrer (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS routen_vorlagen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    waypoints TEXT NOT NULL,
+    route TEXT NOT NULL,
+    distanz_km REAL,
+    erstellt_am INTEGER NOT NULL
+);
+"""
+
 if __name__ == "__main__":
     conn = sqlite3.connect(settings.db_path)
+
+    conn.executescript(NEUE_TABELLEN)
+    print("Tabellen fahrer, routen_vorlagen sichergestellt")
+
     for tabelle, spalten in NEUE_SPALTEN.items():
         vorhandene = {row[1] for row in conn.execute(f"PRAGMA table_info({tabelle})")}
         for spalte, typ in spalten:

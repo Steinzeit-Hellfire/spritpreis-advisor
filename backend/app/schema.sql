@@ -22,9 +22,15 @@ CREATE TABLE IF NOT EXISTS fuel_prices (
 CREATE INDEX IF NOT EXISTS idx_fuel_prices_station_time ON fuel_prices(station_id, timestamp);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_fuel_prices_unique ON fuel_prices(station_id, fuel_type, timestamp);
 
+CREATE TABLE IF NOT EXISTS fahrer (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS refuels (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     station_id INTEGER REFERENCES stations(id),
+    fahrer_id INTEGER REFERENCES fahrer(id),
     datum TEXT NOT NULL,                    -- ISO-Datum, z.B. 2026-07-14
     odometer_km REAL NOT NULL,
     liter REAL NOT NULL,
@@ -34,6 +40,15 @@ CREATE TABLE IF NOT EXISTS refuels (
     bordcomputer_km REAL,                   -- vom Bordcomputer: gefahrene km seit letztem Tanken
     bordcomputer_verbrauch REAL,            -- vom Bordcomputer: Durchschnittsverbrauch L/100km
     foto_pfad TEXT                          -- Pfad zum hochgeladenen Beleg-/Bordcomputer-Foto
+);
+
+CREATE TABLE IF NOT EXISTS routen_vorlagen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    waypoints TEXT NOT NULL,       -- JSON [[lat,lng],...]
+    route TEXT NOT NULL,           -- JSON dichte, straßenfolgende Punkte
+    distanz_km REAL,
+    erstellt_am INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS trips (
