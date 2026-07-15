@@ -7,9 +7,14 @@ function ampelKlasse(status) {
   return "unbekannt";
 }
 
+const WAZE_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px;">
+  <path d="M12 3 L20 12 L12 21 L4 12 Z" fill="#33ccff"/>
+  <path d="M12 7 L12 17 M7 12 L17 12" stroke="#0b1120" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+
 function wazeLink(lat, lng) {
   if (lat == null || lng == null) return "";
-  return `<a href="https://waze.com/ul?ll=${lat}%2C${lng}&navigate=yes" target="_blank" class="waze-link">🧭 In Waze navigieren</a>`;
+  return `<a href="https://waze.com/ul?ll=${lat}%2C${lng}&navigate=yes" target="_blank" class="waze-link">${WAZE_ICON} In Waze navigieren</a>`;
 }
 
 async function ladePreisvergleich() {
@@ -23,10 +28,12 @@ async function ladePreisvergleich() {
       return;
     }
 
-    container.innerHTML = data.stationen.map(s => `
+    container.innerHTML = data.stationen.map(s => {
+      const titel = (s.marke && !s.name.includes(s.marke)) ? `${s.marke} – ${s.name}` : s.name;
+      return `
       <div class="glass-card station-card">
         <div class="info">
-          <h3>${s.marke ? s.marke + " – " : ""}${s.name}</h3>
+          <h3>${titel}</h3>
           <p>${s.adresse ?? ""}</p>
           <span class="ampel ${ampelKlasse(s.status)}">${s.status}</span>
           ${s.basis ? `<p class="hinweis" style="margin-top:6px;">${s.basis}</p>` : ""}
@@ -34,7 +41,8 @@ async function ladePreisvergleich() {
         </div>
         <div class="preis">${s.aktueller_preis != null ? s.aktueller_preis.toFixed(3) + " €" : "–"}</div>
       </div>
-    `).join("");
+    `;
+    }).join("");
   } catch (e) {
     container.innerHTML = `<p class="leer">Preise konnten nicht geladen werden. Läuft der Poller? Ist der API-Key gesetzt?</p>`;
   }
@@ -44,7 +52,10 @@ async function ladeStationenDropdown() {
   const select = document.getElementById("f-station");
   const res = await fetch(`${API}/stations`);
   const stationen = await res.json();
-  select.innerHTML = stationen.map(s => `<option value="${s.id}">${s.marke ?? ""} ${s.name}</option>`).join("");
+  select.innerHTML = stationen.map(s => {
+    const label = (s.marke && !s.name.includes(s.marke)) ? `${s.marke} ${s.name}` : s.name;
+    return `<option value="${s.id}">${label}</option>`;
+  }).join("");
 }
 
 async function ladeTankvorgaenge() {

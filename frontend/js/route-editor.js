@@ -1,3 +1,8 @@
+const WAZE_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px;">
+  <path d="M12 3 L20 12 L12 21 L4 12 Z" fill="#33ccff"/>
+  <path d="M12 7 L12 17 M7 12 L17 12" stroke="#0b1120" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+
 const API = "/api";
 
 // Karte zentriert auf Lippe/Dörentrup-Region
@@ -182,7 +187,7 @@ async function ladeTrips() {
             <td>${t.begleitung ?? "–"}</td>
             <td class="zahl">${t.distanz_km ?? "–"} km</td>
             <td><button class="secondary" data-id="${t.id}">Auf Karte zeigen</button></td>
-            <td>${ziel ? `<a href="https://waze.com/ul?ll=${ziel[0]}%2C${ziel[1]}&navigate=yes" target="_blank" class="waze-link">🧭 Waze</a>` : ""}</td>
+            <td>${ziel ? `<a href="https://waze.com/ul?ll=${ziel[0]}%2C${ziel[1]}&navigate=yes" target="_blank" class="waze-link">${WAZE_ICON} Waze</a>` : ""}</td>
           </tr>
         `;
         }).join("")}
