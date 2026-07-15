@@ -49,5 +49,6 @@ CREATE TABLE IF NOT EXISTS trips (
     kommentar TEXT,
     begleitung TEXT,               -- z.B. "allein", "mit Partner/in"
     fahrtzweck TEXT,               -- z.B. "Arbeit / Pendeln", "Privat"
+    ist_freigegeben INTEGER NOT NULL DEFAULT 0,  -- 0 = privat (nur Admin), 1 = öffentlich sichtbar
     erstellt_am INTEGER NOT NULL
 );

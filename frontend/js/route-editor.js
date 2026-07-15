@@ -4,8 +4,45 @@ const WAZE_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" x
 </svg>`;
 
 const API = "/api";
+let istAdmin = false;
 
-// Karte zentriert auf Lippe/Dörentrup-Region
+// --- Standort & ETA --------------------------------------------------------
+// Hinweis: navigator.geolocation funktioniert nur in einem "sicheren Kontext"
+// (HTTPS oder localhost). Auf http://<lan-ip>:port liefert der Browser hier
+// grundsätzlich keinen Standort - das ist eine Browser-Sicherheitsregel, kein
+// Bug. Der Code fällt in dem Fall einfach sauber zurück (kein ETA, kein Fehler).
+let meinStandort = null;
+
+function standortAnfordern() {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 8000, maximumAge: 5 * 60 * 1000 }
+    );
+  });
+}
+
+async function etaAnzeigen(zielLat, zielLng, containerId) {
+  if (!meinStandort || zielLat == null || zielLng == null) return;
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  try {
+    const url = `https://routing.openstreetmap.de/routed-car/route/v1/driving/` +
+      `${meinStandort.lng},${meinStandort.lat};${zielLng},${zielLat}?overview=false`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code !== "Ok") return;
+    const minuten = Math.round(data.routes[0].duration / 60);
+    const km = (data.routes[0].distance / 1000).toFixed(1);
+    el.textContent = `≈ ${minuten} Min · ${km} km ab deinem Standort (Schätzung, ohne Live-Verkehr)`;
+  } catch (e) {
+    // ETA ist ein Nice-to-have, kein Fehler-Popup nötig
+  }
+}
+
+// --- Karte -------------------------------------------------------------
 const map = L.map("karte").setView([52.05, 8.85], 11);
 
 const layerOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -28,11 +65,6 @@ L.control.layers(
 ).addTo(map);
 
 // --- Routing: Wegpunkte werden über echte Straßen verbunden (OSRM) -------
-// Eigene Wegpunkt-Liste im Code führen (statt inkrementell auf der internen
-// Liste des Routing-Controls herumzusplicen - das war der Bug) und bei jeder
-// Änderung komplett neu an setWaypoints() übergeben. Robuster und deutlich
-// leichter nachzuvollziehen.
-
 let wegpunkte = [];      // Array von L.LatLng
 let letzteRoute = null;  // { coordinates: [[lat,lng],...], distanzKm }
 
@@ -50,7 +82,7 @@ const routingControl = L.Routing.control({
   router: L.Routing.osrmv1({ serviceUrl: "https://routing.openstreetmap.de/routed-car/route/v1" }),
   routeWhileDragging: true,
   draggableWaypoints: true,
-  addWaypoints: true,       // Ziehen der Linie selbst fügt einen Zwischenpunkt ein
+  addWaypoints: true,
   fitSelectedRoutes: false,
   show: false,
   createMarker: eigenerPinMarker,
@@ -73,13 +105,9 @@ routingControl.on("routingerror", (ev) => {
   console.error("Routing-Fehler:", ev.error);
 });
 
-// Hält unsere eigene Wegpunkt-Liste synchron, auch wenn ein Pin gezogen oder
-// über das Ziehen der Linie ein neuer Zwischenpunkt eingefügt wurde.
 routingControl.on("waypointschanged", (ev) => {
   wegpunkte = ev.waypoints.filter(w => w.latLng).map(w => w.latLng);
-  if (wegpunkte.length < 2) {
-    letzteRoute = null;
-  }
+  if (wegpunkte.length < 2) letzteRoute = null;
   distanzAnzeigen();
 });
 
@@ -93,8 +121,8 @@ function distanzAnzeigen() {
   }
 }
 
-// Klick auf die Karte hängt einen neuen Wegpunkt ans Ende an
 map.on("click", (ev) => {
+  if (!istAdmin) return;
   wegpunkte = [...wegpunkte, ev.latlng];
   routingControl.setWaypoints(wegpunkte);
 });
@@ -112,8 +140,6 @@ document.getElementById("btn-reset").addEventListener("click", () => {
   distanzAnzeigen();
 });
 
-// Adresssuche über Nominatim (OpenStreetMap) - zentriert die Karte auf den Fundort,
-// fügt aber selbst keinen Wegpunkt hinzu (das macht der Klick auf die Karte).
 document.getElementById("btn-suchen").addEventListener("click", async () => {
   const query = document.getElementById("ziel-suche").value.trim();
   if (!query) return;
@@ -150,11 +176,15 @@ document.getElementById("trip-form").addEventListener("submit", async (ev) => {
     route: letzteRoute.coordinates,
     distanz_km: Math.round(letzteRoute.distanzKm * 10) / 10,
   };
-  await fetch(`${API}/trips`, {
+  const res = await fetch(`${API}/trips`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  if (res.status === 401) {
+    alert("Nur als Admin möglich - bitte einloggen.");
+    return;
+  }
   ev.target.reset();
   wegpunkte = [];
   routingControl.setWaypoints([]);
@@ -163,22 +193,40 @@ document.getElementById("trip-form").addEventListener("submit", async (ev) => {
   ladeTrips();
 });
 
+// --- Trips laden & anzeigen (Sichtbarkeit macht schon das Backend) -------
+
 async function ladeTrips() {
   const container = document.getElementById("trips-liste");
   const res = await fetch(`${API}/trips`);
   const trips = await res.json();
 
   if (!trips.length) {
-    container.innerHTML = `<p class="leer">Noch keine Strecken gespeichert.</p>`;
+    container.innerHTML = `<p class="leer">${istAdmin ? "Noch keine Strecken gespeichert." : "Keine freigegebenen Strecken vorhanden."}</p>`;
     return;
   }
 
+  const adminSpalten = istAdmin ? `<th>Privat/Öffentlich</th><th></th>` : "";
+
   container.innerHTML = `
     <table>
-      <thead><tr><th>Titel</th><th>Datum</th><th>Zweck</th><th>Begleitung</th><th class="zahl">Distanz</th><th></th><th></th></tr></thead>
+      <thead><tr>
+        <th>Titel</th><th>Datum</th><th>Zweck</th><th>Begleitung</th><th class="zahl">Distanz</th>
+        <th></th><th>Waze</th>${adminSpalten}
+      </tr></thead>
       <tbody>
         ${trips.map(t => {
           const ziel = t.route && t.route.length ? t.route[t.route.length - 1] : null;
+          const etaId = `eta-trip-${t.id}`;
+          const wazeZelle = ziel
+            ? `<a href="https://waze.com/ul?ll=${ziel[0]}%2C${ziel[1]}&navigate=yes" target="_blank" class="waze-link">${WAZE_ICON} Waze</a>
+               <p class="hinweis" id="${etaId}" style="margin:2px 0 0;"></p>`
+            : "";
+          const adminZellen = istAdmin ? `
+            <td>
+              <span class="ampel ${t.ist_freigegeben ? 'guenstig' : 'unbekannt'}">${t.ist_freigegeben ? "öffentlich" : "privat"}</span>
+            </td>
+            <td><button class="secondary" data-freigabe-id="${t.id}" data-freigegeben="${t.ist_freigegeben ? 1 : 0}">${t.ist_freigegeben ? "Sperren" : "Freigeben"}</button></td>
+          ` : "";
           return `
           <tr>
             <td>${t.titel ?? "–"}</td>
@@ -187,7 +235,8 @@ async function ladeTrips() {
             <td>${t.begleitung ?? "–"}</td>
             <td class="zahl">${t.distanz_km ?? "–"} km</td>
             <td><button class="secondary" data-id="${t.id}">Auf Karte zeigen</button></td>
-            <td>${ziel ? `<a href="https://waze.com/ul?ll=${ziel[0]}%2C${ziel[1]}&navigate=yes" target="_blank" class="waze-link">${WAZE_ICON} Waze</a>` : ""}</td>
+            <td>${wazeZelle}</td>
+            ${adminZellen}
           </tr>
         `;
         }).join("")}
@@ -198,6 +247,26 @@ async function ladeTrips() {
   container.querySelectorAll("button[data-id]").forEach(btn => {
     btn.addEventListener("click", () => tripAufKarteLaden(btn.dataset.id));
   });
+  container.querySelectorAll("button[data-freigabe-id]").forEach(btn => {
+    btn.addEventListener("click", () => freigabeUmschalten(btn.dataset.freigabeId, btn.dataset.freigegeben !== "1"));
+  });
+
+  // ETA nachladen, falls Standort verfügbar ist (nicht blockierend)
+  if (meinStandort) {
+    trips.forEach(t => {
+      const ziel = t.route && t.route.length ? t.route[t.route.length - 1] : null;
+      if (ziel) etaAnzeigen(ziel[0], ziel[1], `eta-trip-${t.id}`);
+    });
+  }
+}
+
+async function freigabeUmschalten(tripId, neuerWert) {
+  const res = await fetch(`${API}/trips/${tripId}/freigabe`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ freigegeben: neuerWert }),
+  });
+  if (res.ok) ladeTrips();
 }
 
 async function tripAufKarteLaden(tripId) {
@@ -212,5 +281,63 @@ async function tripAufKarteLaden(tripId) {
   }
 }
 
-distanzAnzeigen();
-ladeTrips();
+// --- Admin-Login ---------------------------------------------------------
+
+function adminUIAktualisieren() {
+  document.getElementById("trip-form-card").style.display = istAdmin ? "" : "none";
+  document.getElementById("admin-hinweis").style.display = istAdmin ? "none" : "";
+  document.getElementById("login-form-bereich").style.display = istAdmin ? "none" : "";
+  document.getElementById("logout-bereich").style.display = istAdmin ? "" : "none";
+}
+
+async function pruefeAdminStatus() {
+  try {
+    const res = await fetch(`${API}/auth/status`);
+    const data = await res.json();
+    istAdmin = !!data.admin;
+  } catch (e) {
+    istAdmin = false;
+  }
+  adminUIAktualisieren();
+}
+
+document.getElementById("login-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const passwort = document.getElementById("login-passwort").value;
+  const fehlerEl = document.getElementById("login-fehler");
+  fehlerEl.style.display = "none";
+
+  const res = await fetch(`${API}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ passwort }),
+  });
+
+  if (!res.ok) {
+    fehlerEl.textContent = "Login fehlgeschlagen - Passwort prüfen.";
+    fehlerEl.style.display = "";
+    return;
+  }
+
+  document.getElementById("login-passwort").value = "";
+  istAdmin = true;
+  adminUIAktualisieren();
+  ladeTrips();
+});
+
+document.getElementById("btn-logout").addEventListener("click", async () => {
+  await fetch(`${API}/auth/logout`, { method: "POST" });
+  istAdmin = false;
+  adminUIAktualisieren();
+  ladeTrips();
+});
+
+// --- Start -----------------------------------------------------------
+
+(async () => {
+  await pruefeAdminStatus();
+  distanzAnzeigen();
+  await ladeTrips();
+  meinStandort = await standortAnfordern();
+  if (meinStandort) ladeTrips(); // ETA nachladen, sobald Standort da ist
+})();

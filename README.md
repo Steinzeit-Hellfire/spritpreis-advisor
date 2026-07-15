@@ -1,14 +1,14 @@
 # Spritpreis-Advisor
 
-Vergleicht die E5-Preise deiner Stammtankstellen (Shell Lemgo, Shell Bad
-Salzuflen) und zeigt an, ob's gerade günstig ist. Zusätzlich: Strecken per
-Pins auf einer Karte einzeichnen.
+Vergleicht die E5-Preise deiner Stammtankstellen und zeigt an, ob's gerade
+günstig ist. Zusätzlich: Strecken per Wegpunkten auf einer Karte einzeichnen
+(echtes Straßen-Routing), mit Datenschutz-Steuerung (Strecken sind privat,
+bis du sie freigibst).
 
 ## Setup
 
 ```bash
-# 1. Projekt auf den Pi holen
-cd /home/detrees95
+# 1. Projekt holen
 git clone <repo-url> spritpreis-advisor
 cd spritpreis-advisor/backend
 
@@ -17,30 +17,44 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt --break-system-packages
 
-# 3. API-Key eintragen
+# 3. Konfiguration
 cp .env.example .env
-nano .env    # TANKERKOENIG_API_KEY einfügen (kostenlos: creativecommons.tankerkoenig.de/api-key)
+nano .env
+# TANKERKOENIG_API_KEY einfügen (kostenlos: creativecommons.tankerkoenig.de/api-key)
+# DB_PATH auf deinen eigenen Pfad anpassen
+# ADMIN_PASSWORD und SESSION_SECRET setzen (siehe Abschnitt "Zugriffsschutz")
 
 # 4. Datenbank anlegen
 python -m app.database
 ```
 
-## Deine Stationen eintragen
-
-Erst die Tankerkönig-IDs von Shell finden:
+## Frontend-Konfiguration
 
 ```bash
-python find_stations.py 52.0286 8.8996 --radius 5   # Lemgo
-python find_stations.py 52.0894 8.7508 --radius 5   # Bad Salzuflen
+cd ../frontend
+cp config.example.js config.js
+nano config.js   # ACC_DASHBOARD_URL auf deine eigene Adresse setzen
 ```
 
-Zeigt eine Liste mit ID, Name, Adresse. Shell raussuchen, ID kopieren, dann
-je Station:
+`config.js` ist in `.gitignore` und wird nie committet.
+
+## Deine Stationen eintragen
+
+Erst die Tankerkönig-IDs deiner Wunsch-Tankstellen finden (eigene Koordinaten
+einsetzen, hier nur als Beispiel München und Hamburg):
+
+```bash
+python find_stations.py 48.1351 11.5820 --radius 5   # Beispiel: München
+python find_stations.py 53.5511 9.9937 --radius 5    # Beispiel: Hamburg
+```
+
+Zeigt eine Liste mit ID, Name, Adresse, Koordinaten. Passende Zeile raussuchen,
+dann je Station:
 
 ```bash
 curl -X POST http://localhost:8091/api/stations \
   -H "Content-Type: application/json" \
-  -d '{"tankerkoenig_id": "<ID>", "name": "Shell Lemgo", "marke": "Shell"}'
+  -d '{"tankerkoenig_id": "<ID>", "name": "<Name>", "marke": "<Marke>", "lat": <LAT>, "lng": <LNG>}'
 ```
 
 ## Starten
@@ -49,10 +63,8 @@ curl -X POST http://localhost:8091/api/stations \
 .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8091
 ```
 
-Dashboard läuft dann unter `http://<pi-ip>:8091`.
-
-Für Dauerbetrieb: als systemd-Service einrichten, genau wie beim
-ACC-Dashboard (`uvicorn app.main:app --host 127.0.0.1 --port 8091`).
+Für Dauerbetrieb: als systemd-Service einrichten, der diesen Befehl im
+`backend`-Verzeichnis mit aktivierter venv ausführt.
 
 ## Preise automatisch abfragen (Cronjob)
 
@@ -60,25 +72,58 @@ ACC-Dashboard (`uvicorn app.main:app --host 127.0.0.1 --port 8091`).
 crontab -e
 ```
 
-Zeile einfügen:
+Zeile einfügen (Pfad an dein System anpassen):
 
 ```
-*/5 * * * * cd /home/detrees95/spritpreis-advisor/backend && .venv/bin/python run_poller.py >> poller.log 2>&1
+*/5 * * * * cd /pfad/zu/spritpreis-advisor/backend && .venv/bin/python run_poller.py >> poller.log 2>&1
 ```
 
 ## Von außen erreichbar machen
 
-`nginx/spritpreis-advisor.conf` in deine Nginx-Config übernehmen, dann:
+`nginx/spritpreis-advisor.conf` in deine Nginx-Config übernehmen (Port/Domain
+nach Wunsch anpassen), dann `sudo nginx -s reload`.
 
-```bash
-sudo nginx -s reload
+## Zugriffsschutz für Strecken
+
+Strecken (Routen, Kommentare, Begleitung, Fahrtzweck) sind **standardmäßig
+privat** und nur sichtbar, wenn du als Admin eingeloggt bist. Andere können
+die Preis-Seite weiterhin normal nutzen, sehen aber nur Strecken, die du
+explizit freigegeben hast.
+
+In `.env` festlegen:
+
+```
+ADMIN_PASSWORD=ein-sicheres-passwort
+SESSION_SECRET=eine-zufällige-zeichenkette
 ```
 
-Danach in `frontend/index.html` und `frontend/karte.html` die Platzhalter-URL
-`acc-dashboard.local` durch die echte Adresse deines ACC-Dashboards ersetzen
-(und dort umgekehrt einen Link hierher ergänzen).
+Login über den "Admin-Login"-Link unten auf der Strecken-Seite. Als Admin
+kannst du bei jeder Strecke über "Freigeben/Sperren" steuern, ob sie auch
+ohne Login sichtbar ist.
+
+**Wichtig:** Das schützt vor casual-Zugriff im selben Netzwerk, ist aber kein
+Ersatz für echte Verschlüsselung. Wenn du die Seite außerhalb deines
+Heimnetzes erreichbar machst, unbedingt zusätzlich HTTPS einrichten (z.B.
+über einen Reverse Proxy mit Let's Encrypt) - sonst geht das Passwort im
+Klartext übers Netz.
+
+## Funktionsübersicht
+
+- **Preise-Seite**: Live-Vergleich deiner Favoriten-Stationen mit Ampel
+  (günstig / üblich / teurer als üblich). Manuelle Tankvorgangs-Erfassung
+  inkl. Verbrauchs- und Kosten/km-Berechnung, Bordcomputer-Werten und
+  Foto-Upload. "In Waze navigieren"-Link mit Live-Standort-ETA.
+- **Strecken-Seite**: Wegpunkte auf der Karte setzen, Route wird automatisch
+  über echte Straßen berechnet (OSRM) und lässt sich per Drag&Drop anpassen.
+  Datum/Uhrzeit, Zweck, Begleitung, Kommentar. Privat bis zur Freigabe durch
+  den Admin.
+- **Historischer Preis-Import**: `import_history.py` kann Monate an
+  Preishistorie aus dem offiziellen Tankerkönig-Datenarchiv importieren
+  (Zugang muss separat bei Tankerkönig angefragt werden, siehe deren
+  Dokumentation).
 
 ## Später möglich
 
 - Höhenmeter je Strecke (DB-Spalten sind schon vorbereitet)
 - Discord-Bot pusht Preis-Empfehlungen automatisch
+- KI-gestützte Preisvorhersage, sobald genug Historie vorliegt

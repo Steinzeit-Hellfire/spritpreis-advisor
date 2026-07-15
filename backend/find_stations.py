@@ -1,9 +1,10 @@
 """
-Einmaliges Hilfsskript, um die Tankerkönig-Stations-ID deiner Shell-Tankstellen
+Einmaliges Hilfsskript, um die Tankerkönig-Stations-ID deiner Wunsch-Tankstellen
 herauszufinden (wird für stations.tankerkoenig_id gebraucht).
 
-Aufruf-Beispiel (Koordinaten von Lemgo bzw. Bad Salzuflen anpassen):
-    python find_stations.py 52.0286 8.8996 --radius 5
+Aufruf-Beispiel (eigene Koordinaten einsetzen):
+    python find_stations.py 48.1351 11.5820 --radius 5   # z.B. München
+    python find_stations.py 53.5511 9.9937 --radius 5    # z.B. Hamburg
 """
 import argparse
 from app.config import settings

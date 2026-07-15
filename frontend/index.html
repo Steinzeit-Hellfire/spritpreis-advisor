@@ -13,7 +13,7 @@
   <nav>
     <a href="index.html" class="active">Preise</a>
     <a href="karte.html">Strecken</a>
-    <a href="http://192.168.178.25:8080" title="Zum ACC-Dashboard">ACC-Dashboard ↗</a>
+    <a href="#" id="acc-link" title="Zum ACC-Dashboard">ACC-Dashboard ↗</a>
   </nav>
 </header>
 
@@ -71,6 +71,11 @@
   </div>
 </main>
 
+<script src="config.js"></script>
 <script src="js/dashboard.js"></script>
+<script>
+  const accLink = document.getElementById("acc-link");
+  if (typeof ACC_DASHBOARD_URL !== "undefined") accLink.href = ACC_DASHBOARD_URL;
+</script>
 </body>
 </html>

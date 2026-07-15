@@ -18,6 +18,7 @@ NEUE_SPALTEN = {
         ("kommentar", "TEXT"),
         ("begleitung", "TEXT"),
         ("fahrtzweck", "TEXT"),
+        ("ist_freigegeben", "INTEGER NOT NULL DEFAULT 0"),
     ],
 }
 

@@ -21,7 +21,7 @@
   <nav>
     <a href="index.html">Preise</a>
     <a href="karte.html" class="active">Strecken</a>
-    <a href="http://192.168.178.25:8080" title="Zum ACC-Dashboard">ACC-Dashboard ↗</a>
+    <a href="#" id="acc-link" title="Zum ACC-Dashboard">ACC-Dashboard ↗</a>
   </nav>
 </header>
 
@@ -42,10 +42,10 @@
   <div id="karte"></div>
 
   <div class="section-title">Strecke speichern</div>
-  <div class="glass-card">
+  <div class="glass-card" id="trip-form-card">
     <form class="eingabe" id="trip-form">
       <label>Titel
-        <input type="text" id="t-titel" placeholder="z. B. Lemgo – Bad Salzuflen">
+        <input type="text" id="t-titel" placeholder="z. B. Musterstadt – Nachbarort">
       </label>
       <label>Datum &amp; Uhrzeit
         <input type="datetime-local" id="t-datum">
@@ -71,13 +71,41 @@
     </form>
     <p class="hinweis" id="distanz-anzeige"></p>
   </div>
+  <p class="hinweis" id="admin-hinweis" style="display:none;">
+    Strecken anlegen und bearbeiten ist nur als Admin möglich. Du siehst hier nur freigegebene Strecken.
+  </p>
 
   <div class="section-title">Gespeicherte Strecken</div>
   <div id="trips-liste" class="glass-card"><p class="leer">Lade Strecken…</p></div>
+
+  <div class="section-title">Zugriff</div>
+  <div class="glass-card" id="login-bereich">
+    <div id="login-form-bereich">
+      <p class="hinweis" style="margin-top:0;">Strecken sind standardmäßig privat. Als Admin siehst und verwaltest du alle.</p>
+      <form class="eingabe" id="login-form">
+        <label>Admin-Passwort
+          <input type="password" id="login-passwort" required>
+        </label>
+        <label style="justify-content:flex-end;">
+          <button type="submit">Anmelden</button>
+        </label>
+      </form>
+      <p class="hinweis" id="login-fehler" style="display:none; color: var(--teuer);"></p>
+    </div>
+    <div id="logout-bereich" style="display:none;">
+      <p class="hinweis" style="margin-top:0;">Als Admin angemeldet.</p>
+      <button class="secondary" id="btn-logout" type="button">Abmelden</button>
+    </div>
+  </div>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+<script src="config.js"></script>
 <script src="js/route-editor.js"></script>
+<script>
+  const accLink = document.getElementById("acc-link");
+  if (typeof ACC_DASHBOARD_URL !== "undefined") accLink.href = ACC_DASHBOARD_URL;
+</script>
 </body>
 </html>

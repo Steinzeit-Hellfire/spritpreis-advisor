@@ -12,9 +12,45 @@ const WAZE_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" x
   <path d="M12 7 L12 17 M7 12 L17 12" stroke="#0b1120" stroke-width="1.6" stroke-linecap="round"/>
 </svg>`;
 
-function wazeLink(lat, lng) {
+function wazeLink(lat, lng, containerId) {
   if (lat == null || lng == null) return "";
-  return `<a href="https://waze.com/ul?ll=${lat}%2C${lng}&navigate=yes" target="_blank" class="waze-link">${WAZE_ICON} In Waze navigieren</a>`;
+  return `<a href="https://waze.com/ul?ll=${lat}%2C${lng}&navigate=yes" target="_blank" class="waze-link">${WAZE_ICON} In Waze navigieren</a>
+          <p class="hinweis" id="${containerId}" style="margin:4px 0 0;"></p>`;
+}
+
+// Hinweis: navigator.geolocation braucht einen "sicheren Kontext" (HTTPS oder
+// localhost). Über http://<lan-ip>:port liefert der Browser hier grundsätzlich
+// keinen Standort - Browser-Sicherheitsregel, kein Bug. Fällt dann sauber
+// zurück auf "kein ETA", ohne Fehlermeldung.
+let meinStandort = null;
+
+function standortAnfordern() {
+  return new Promise((resolve) => {
+    if (!("geolocation" in navigator)) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 8000, maximumAge: 5 * 60 * 1000 }
+    );
+  });
+}
+
+async function etaAnzeigen(zielLat, zielLng, containerId) {
+  if (!meinStandort || zielLat == null || zielLng == null) return;
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  try {
+    const url = `https://routing.openstreetmap.de/routed-car/route/v1/driving/` +
+      `${meinStandort.lng},${meinStandort.lat};${zielLng},${zielLat}?overview=false`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code !== "Ok") return;
+    const minuten = Math.round(data.routes[0].duration / 60);
+    const km = (data.routes[0].distance / 1000).toFixed(1);
+    el.textContent = `≈ ${minuten} Min · ${km} km ab deinem Standort (Schätzung, ohne Live-Verkehr)`;
+  } catch (e) {
+    // ETA ist ein Nice-to-have, kein Fehler-Popup nötig
+  }
 }
 
 async function ladePreisvergleich() {
@@ -37,12 +73,18 @@ async function ladePreisvergleich() {
           <p>${s.adresse ?? ""}</p>
           <span class="ampel ${ampelKlasse(s.status)}">${s.status}</span>
           ${s.basis ? `<p class="hinweis" style="margin-top:6px;">${s.basis}</p>` : ""}
-          ${s.lat != null ? `<p style="margin-top:8px;">${wazeLink(s.lat, s.lng)}</p>` : ""}
+          ${s.lat != null ? `<p style="margin-top:8px;">${wazeLink(s.lat, s.lng, `eta-station-${s.station_id}`)}</p>` : ""}
         </div>
         <div class="preis">${s.aktueller_preis != null ? s.aktueller_preis.toFixed(3) + " €" : "–"}</div>
       </div>
     `;
     }).join("");
+
+    if (meinStandort) {
+      data.stationen.forEach(s => {
+        if (s.lat != null) etaAnzeigen(s.lat, s.lng, `eta-station-${s.station_id}`);
+      });
+    }
   } catch (e) {
     container.innerHTML = `<p class="leer">Preise konnten nicht geladen werden. Läuft der Poller? Ist der API-Key gesetzt?</p>`;
   }
@@ -118,3 +160,8 @@ ladePreisvergleich();
 ladeStationenDropdown();
 ladeTankvorgaenge();
 setInterval(ladePreisvergleich, 60_000); // Ansicht minütlich auffrischen
+
+(async () => {
+  meinStandort = await standortAnfordern();
+  if (meinStandort) ladePreisvergleich(); // ETA nachladen, sobald Standort da ist
+})();

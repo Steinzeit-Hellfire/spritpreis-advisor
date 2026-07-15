@@ -22,6 +22,8 @@ class Settings:
     db_path: str = os.environ.get("DB_PATH", str(BASE_DIR / "spritpreis.db"))
     poll_intervall_sekunden: int = int(os.environ.get("POLL_INTERVALL_SEKUNDEN", "300"))
     cors_origins: list[str] = os.environ.get("CORS_ORIGINS", "*").split(",")
+    admin_password: str = os.environ.get("ADMIN_PASSWORD", "")
+    session_secret: str = os.environ.get("SESSION_SECRET", "")
 
 
 settings = Settings()
