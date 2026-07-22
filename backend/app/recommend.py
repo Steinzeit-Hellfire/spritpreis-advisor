@@ -1,5 +1,6 @@
 from datetime import datetime
 from .database import get_connection
+from .ml_predict import prognose_24h
 
 
 def get_comparison() -> dict:
@@ -89,6 +90,7 @@ def get_comparison() -> dict:
                 "vergleichswert": round(vergleichswert, 3) if vergleichswert else None,
                 "basis": basis,
                 "status": status,
+                "prognose": prognose_24h(row["id"]),
             }
         )
 

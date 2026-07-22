@@ -107,6 +107,42 @@ Heimnetzes erreichbar machst, unbedingt zusätzlich HTTPS einrichten (z.B.
 über einen Reverse Proxy mit Let's Encrypt) - sonst geht das Passwort im
 Klartext übers Netz.
 
+## Preis-Prognose (KI-Modell)
+
+Zusätzlich zur einfachen Statistik trainiert `ml_train.py` pro Station ein
+kleines Machine-Learning-Modell (Gradient Boosting, scikit-learn), das aus
+Wochentag/Uhrzeit-Mustern eine 24h-Prognose ableitet ("voraussichtlich am
+günstigsten gegen 20 Uhr"). Braucht mindestens 200 Preis-Datenpunkte pro
+Station, sonst wird die Station beim Training übersprungen.
+
+Einmalig manuell anstoßen oder per Cronjob nachts laufen lassen:
+
+```bash
+crontab -e
+```
+
+Zeile ergänzen (täglich um 3 Uhr):
+
+```
+0 3 * * * cd /pfad/zu/spritpreis-advisor/backend && .venv/bin/python ml_train.py >> ml_train.log 2>&1
+```
+
+Das Backend liest die trainierten Modelle bei jeder Anfrage automatisch neu
+ein - kein Neustart nötig, wenn ein neues Modell dazukommt.
+
+## Historische Preisdaten importieren (optional, aber empfohlen)
+
+Statt wochenlang auf den Live-Poller zu warten, lassen sich Monate an echter
+Historie direkt importieren:
+
+1. Zugang beim Tankerkönig-Team anfragen (siehe deren Doku/Kontakt)
+2. `python download_history.py --tage 90` (lädt gezielt einzelne Tage,
+   kein Voll-Clone - das Repo ist >100GB entpackt)
+3. `python import_history.py ~/tankerkoenig-import`
+
+Danach direkt `python ml_train.py` laufen lassen, um sofort ein Modell mit
+echter Historie zu trainieren.
+
 ## Funktionsübersicht
 
 - **Preise-Seite**: Live-Vergleich deiner Favoriten-Stationen mit Ampel
