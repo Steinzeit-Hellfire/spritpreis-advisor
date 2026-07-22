@@ -24,6 +24,8 @@ class Settings:
     cors_origins: list[str] = os.environ.get("CORS_ORIGINS", "*").split(",")
     admin_password: str = os.environ.get("ADMIN_PASSWORD", "")
     session_secret: str = os.environ.get("SESSION_SECRET", "")
+    tankerkoenig_git_user: str = os.environ.get("TANKERKOENIG_GIT_USER", "")
+    tankerkoenig_git_password: str = os.environ.get("TANKERKOENIG_GIT_PASSWORD", "")
 
 
 settings = Settings()
