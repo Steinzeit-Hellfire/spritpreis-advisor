@@ -2,6 +2,15 @@ from datetime import datetime
 from .database import get_connection
 from .ml_predict import prognose_24h
 
+# Tankrabatt (befristete Energiesteuersenkung, ~17 Ct/L brutto) galt vom
+# 1. Mai bis 30. Juni 2026 - danach wieder regulärer Steuersatz. Diese Preise
+# sind kein normales Stunden-/Wochentagsmuster, sondern reine Steuerpolitik,
+# und würden Vergleichswert + Modell ohne Ausschluss künstlich nach unten
+# verzerren. Bei Bedarf hier anpassen, falls es zukünftig weitere befristete
+# Steuersenkungen gibt.
+TANKRABATT_START = int(datetime(2026, 5, 1).timestamp())
+TANKRABATT_ENDE = int(datetime(2026, 7, 1).timestamp())  # exklusiv, 1. Juli zählt schon wieder normal
+
 
 def get_comparison() -> dict:
     """Vergleicht die aktuellen Preise aller Favoriten-Stationen und gibt für jede
@@ -36,7 +45,8 @@ def get_comparison() -> dict:
     for row in aktuelle_preise:
         # Feinere Statistik: gleiche Uhrzeit, aber nur wenn Daten von mehreren
         # verschiedenen Tagen vorliegen (sonst ist "Durchschnitt" nur der
-        # heutige Wert selbst und damit bedeutungslos).
+        # heutige Wert selbst und damit bedeutungslos). Tankrabatt-Zeitraum
+        # ausgeschlossen, da sonst künstlich verzerrt (siehe Konstanten oben).
         stunden_stat = conn.execute(
             """
             SELECT AVG(price) AS avg_price,
@@ -44,18 +54,21 @@ def get_comparison() -> dict:
             FROM fuel_prices
             WHERE station_id = ? AND is_open = 1
               AND strftime('%H', datetime(timestamp, 'unixepoch')) = ?
+              AND (timestamp < ? OR timestamp >= ?)
             """,
-            (row["id"], stunde),
+            (row["id"], stunde, TANKRABATT_START, TANKRABATT_ENDE),
         ).fetchone()
 
-        # Grobe Statistik: einfach alle bisherigen Preise dieser Station.
+        # Grobe Statistik: einfach alle bisherigen Preise dieser Station
+        # (ebenfalls ohne Tankrabatt-Zeitraum).
         gesamt_stat = conn.execute(
             """
             SELECT AVG(price) AS avg_price, COUNT(*) AS n
             FROM fuel_prices
             WHERE station_id = ? AND is_open = 1
+              AND (timestamp < ? OR timestamp >= ?)
             """,
-            (row["id"],),
+            (row["id"], TANKRABATT_START, TANKRABATT_ENDE),
         ).fetchone()
 
         if stunden_stat["tage"] and stunden_stat["tage"] >= 3:

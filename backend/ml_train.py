@@ -25,6 +25,11 @@ from app.database import get_connection
 MODEL_DIR = Path(settings.db_path).resolve().parent / "modelle"
 MIN_DATENPUNKTE = 200
 
+# Siehe app/recommend.py für Details: Tankrabatt-Zeitraum verzerrt die Preise
+# künstlich um ~17 Ct/L und soll nicht als "normales" Muster gelernt werden.
+TANKRABATT_START = int(datetime(2026, 5, 1).timestamp())
+TANKRABATT_ENDE = int(datetime(2026, 7, 1).timestamp())
+
 
 def _merkmale(timestamp: int) -> list[float]:
     dt = datetime.fromtimestamp(timestamp)
@@ -41,12 +46,16 @@ def trainiere_alle_stationen():
 
     for station in stationen:
         rows = conn.execute(
-            "SELECT price, timestamp FROM fuel_prices WHERE station_id = ? AND is_open = 1 ORDER BY timestamp",
-            (station["id"],),
+            """SELECT price, timestamp FROM fuel_prices
+               WHERE station_id = ? AND is_open = 1
+                 AND (timestamp < ? OR timestamp >= ?)
+               ORDER BY timestamp""",
+            (station["id"], TANKRABATT_START, TANKRABATT_ENDE),
         ).fetchall()
 
         if len(rows) < MIN_DATENPUNKTE:
-            print(f"{station['name']}: nur {len(rows)} Datenpunkte (mind. {MIN_DATENPUNKTE} nötig) - übersprungen")
+            print(f"{station['name']}: nur {len(rows)} Datenpunkte außerhalb des Tankrabatt-Zeitraums "
+                  f"(mind. {MIN_DATENPUNKTE} nötig) - übersprungen")
             continue
 
         X = np.array([_merkmale(r["timestamp"]) for r in rows])
