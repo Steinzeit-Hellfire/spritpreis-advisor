@@ -103,7 +103,7 @@ def get_comparison() -> dict:
                 "vergleichswert": round(vergleichswert, 3) if vergleichswert else None,
                 "basis": basis,
                 "status": status,
-                "prognose": prognose_24h(row["id"]),
+                "prognose": prognose_24h(row["id"], aktueller_preis=row["price"]),
             }
         )
 

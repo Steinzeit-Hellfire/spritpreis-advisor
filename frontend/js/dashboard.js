@@ -87,7 +87,7 @@ async function ladePreisvergleich() {
           <p>${s.adresse ?? ""}</p>
           <span class="ampel ${ampelKlasse(s.status)}">${s.status}</span>
           ${s.basis ? `<p class="hinweis" style="margin-top:6px;">${s.basis}</p>` : ""}
-          ${s.prognose ? `<p class="hinweis" style="margin-top:4px; color: var(--accent);">📈 Prognose: ${s.prognose.prognostizierter_preis.toFixed(3)} € gegen ${s.prognose.beste_uhrzeit} (in ${s.prognose.in_stunden}h)</p>` : ""}
+          ${s.prognose ? `<p class="hinweis" style="margin-top:4px; color: var(--accent);">📈 ${s.prognose.jetzt_am_besten ? "Prognose: jetzt ist schon dein bestes Zeitfenster für die nächsten 24h" : `Prognose: ${s.prognose.prognostizierter_preis.toFixed(3)} € gegen ${s.prognose.beste_uhrzeit} (in ${s.prognose.in_stunden}h)`}</p>` : ""}
           ${s.lat != null ? `<p style="margin-top:8px;">${wazeLink(s.lat, s.lng, `eta-station-${s.station_id}`)}</p>` : ""}
         </div>
         <div class="preis">${s.aktueller_preis != null ? s.aktueller_preis.toFixed(3) + " €" : "–"}</div>
