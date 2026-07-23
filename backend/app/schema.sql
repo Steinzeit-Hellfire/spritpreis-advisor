@@ -42,6 +42,15 @@ CREATE TABLE IF NOT EXISTS refuels (
     foto_pfad TEXT                          -- Pfad zum hochgeladenen Beleg-/Bordcomputer-Foto
 );
 
+CREATE TABLE IF NOT EXISTS sondereffekte (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    start_datum TEXT NOT NULL,     -- ISO-Datum, z.B. 2026-05-01
+    end_datum TEXT NOT NULL,       -- ISO-Datum, inklusive, z.B. 2026-06-30
+    beschreibung TEXT,
+    erstellt_am INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS routen_vorlagen (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,

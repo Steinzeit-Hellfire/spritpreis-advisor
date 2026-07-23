@@ -1,15 +1,17 @@
 from datetime import datetime
 from .database import get_connection
 from .ml_predict import prognose_24h
+from .sondereffekte import lade_ausschlusszeitraeume
 
-# Tankrabatt (befristete Energiesteuersenkung, ~17 Ct/L brutto) galt vom
-# 1. Mai bis 30. Juni 2026 - danach wieder regulärer Steuersatz. Diese Preise
-# sind kein normales Stunden-/Wochentagsmuster, sondern reine Steuerpolitik,
-# und würden Vergleichswert + Modell ohne Ausschluss künstlich nach unten
-# verzerren. Bei Bedarf hier anpassen, falls es zukünftig weitere befristete
-# Steuersenkungen gibt.
-TANKRABATT_START = int(datetime(2026, 5, 1).timestamp())
-TANKRABATT_ENDE = int(datetime(2026, 7, 1).timestamp())  # exklusiv, 1. Juli zählt schon wieder normal
+
+def _ausschluss_bedingung(zeitraeume: list[tuple[int, int]]) -> tuple[str, list]:
+    """Baut ein SQL-Fragment, das alle als 'Sondereffekt' hinterlegten
+    Zeiträume (z.B. Tankrabatt) aus einer Preis-Abfrage ausschließt."""
+    if not zeitraeume:
+        return "", []
+    teile = ["(timestamp < ? OR timestamp >= ?)" for _ in zeitraeume]
+    params = [wert for start, ende in zeitraeume for wert in (start, ende)]
+    return "AND " + " AND ".join(teile), params
 
 
 def get_comparison() -> dict:
@@ -23,8 +25,13 @@ def get_comparison() -> dict:
     2. Bis dahin: Vergleich gegen den bisherigen Gesamtschnitt der Station
        (braucht nur 3 Datenpunkte, also ~15 Minuten Laufzeit) - grob, aber
        besser als "keine Historie".
+
+    Zeiträume aus der Tabelle "sondereffekte" (z.B. Tankrabatt) werden aus
+    beiden Berechnungen ausgeschlossen, siehe app/sondereffekte.py.
     """
     conn = get_connection()
+    ausschluesse = lade_ausschlusszeitraeume()
+    bedingung, ausschluss_params = _ausschluss_bedingung(ausschluesse)
 
     aktuelle_preise = conn.execute(
         """
@@ -43,32 +50,26 @@ def get_comparison() -> dict:
 
     ergebnisse = []
     for row in aktuelle_preise:
-        # Feinere Statistik: gleiche Uhrzeit, aber nur wenn Daten von mehreren
-        # verschiedenen Tagen vorliegen (sonst ist "Durchschnitt" nur der
-        # heutige Wert selbst und damit bedeutungslos). Tankrabatt-Zeitraum
-        # ausgeschlossen, da sonst künstlich verzerrt (siehe Konstanten oben).
         stunden_stat = conn.execute(
-            """
+            f"""
             SELECT AVG(price) AS avg_price,
                    COUNT(DISTINCT date(timestamp, 'unixepoch')) AS tage
             FROM fuel_prices
             WHERE station_id = ? AND is_open = 1
               AND strftime('%H', datetime(timestamp, 'unixepoch')) = ?
-              AND (timestamp < ? OR timestamp >= ?)
+              {bedingung}
             """,
-            (row["id"], stunde, TANKRABATT_START, TANKRABATT_ENDE),
+            (row["id"], stunde, *ausschluss_params),
         ).fetchone()
 
-        # Grobe Statistik: einfach alle bisherigen Preise dieser Station
-        # (ebenfalls ohne Tankrabatt-Zeitraum).
         gesamt_stat = conn.execute(
-            """
+            f"""
             SELECT AVG(price) AS avg_price, COUNT(*) AS n
             FROM fuel_prices
             WHERE station_id = ? AND is_open = 1
-              AND (timestamp < ? OR timestamp >= ?)
+              {bedingung}
             """,
-            (row["id"], TANKRABATT_START, TANKRABATT_ENDE),
+            (row["id"], *ausschluss_params),
         ).fetchone()
 
         if stunden_stat["tage"] and stunden_stat["tage"] >= 3:

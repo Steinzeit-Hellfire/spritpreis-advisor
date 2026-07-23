@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .database import init_db
-from .routers import prices, refuels, trips, auth, fahrer, routen_vorlagen
+from .routers import prices, refuels, trips, auth, fahrer, routen_vorlagen, sondereffekte
 
 app = FastAPI(title="Spritpreis-Advisor")
 
@@ -23,6 +23,7 @@ app.include_router(trips.router)
 app.include_router(auth.router)
 app.include_router(fahrer.router)
 app.include_router(routen_vorlagen.router)
+app.include_router(sondereffekte.router)
 
 
 @app.on_event("startup")

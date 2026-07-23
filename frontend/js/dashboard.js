@@ -12,6 +12,8 @@ async function pruefeAdminStatus() {
   document.getElementById("refuel-form-card").style.display = istAdmin ? "" : "none";
   document.getElementById("refuel-table-card").style.display = istAdmin ? "" : "none";
   document.getElementById("refuel-admin-hinweis").style.display = istAdmin ? "none" : "";
+  document.getElementById("sonder-form-details").style.display = istAdmin ? "" : "none";
+  document.getElementById("sonder-admin-hinweis").style.display = istAdmin ? "" : "none";
 }
 
 function ampelKlasse(status) {
@@ -208,10 +210,68 @@ ladePreisvergleich();
 ladeStationenDropdown();
 setInterval(ladePreisvergleich, 60_000); // Ansicht minütlich auffrischen
 
+async function ladeSondereffekte() {
+  const container = document.getElementById("sonder-liste");
+  const res = await fetch(`${API}/sondereffekte`);
+  const liste = await res.json();
+
+  if (!liste.length) {
+    container.innerHTML = `<p class="leer">Keine Sondereffekte hinterlegt.</p>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table>
+      <thead><tr><th>Name</th><th>Von</th><th>Bis</th><th>Beschreibung</th>${istAdmin ? "<th></th>" : ""}</tr></thead>
+      <tbody>
+        ${liste.map(s => `
+          <tr>
+            <td>${s.name}</td>
+            <td>${s.start_datum}</td>
+            <td>${s.end_datum}</td>
+            <td>${s.beschreibung ?? "–"}</td>
+            ${istAdmin ? `<td><button class="secondary" data-loeschen-id="${s.id}">Löschen</button></td>` : ""}
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+
+  container.querySelectorAll("button[data-loeschen-id]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Diesen Sondereffekt wirklich löschen? Betroffene Zeiträume fließen danach wieder normal in Statistik/KI-Training ein.")) return;
+      await fetch(`${API}/sondereffekte/${btn.dataset.loeschenId}`, { method: "DELETE" });
+      ladeSondereffekte();
+    });
+  });
+}
+
+document.getElementById("sonder-form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const payload = {
+    name: document.getElementById("sonder-name").value,
+    start_datum: document.getElementById("sonder-start").value,
+    end_datum: document.getElementById("sonder-ende").value,
+    beschreibung: document.getElementById("sonder-beschreibung").value || null,
+  };
+  const res = await fetch(`${API}/sondereffekte`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.status === 401) {
+    alert("Nur als Admin möglich - bitte auf der Strecken-Seite einloggen.");
+    return;
+  }
+  ev.target.reset();
+  ladeSondereffekte();
+});
+
 (async () => {
   await pruefeAdminStatus();
   ladeFahrerDropdown();
   ladeTankvorgaenge();
+  ladeSondereffekte();
   meinStandort = await standortAnfordern();
   if (meinStandort) ladePreisvergleich(); // ETA nachladen, sobald Standort da ist
 })();

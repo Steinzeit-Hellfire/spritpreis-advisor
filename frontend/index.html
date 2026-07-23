@@ -87,6 +87,35 @@
       <tbody></tbody>
     </table>
   </div>
+  <div class="section-title">Sondereffekte (z. B. Tankrabatt)</div>
+  <p class="hinweis" id="sonder-admin-hinweis" style="display:none;">
+    Verwaltung nur für Admin. Trag hier befristete Ereignisse ein, die Preise
+    künstlich verzerren (z. B. ein neuer Tankrabatt) - diese Zeiträume werden
+    automatisch aus Statistik und KI-Training ausgeschlossen.
+  </p>
+  <div class="glass-card" id="sonder-card">
+    <div id="sonder-liste"><p class="leer">Lade Sondereffekte…</p></div>
+    <details style="margin-top:14px;" id="sonder-form-details">
+      <summary class="hinweis" style="cursor:pointer;">Neuen Sondereffekt eintragen</summary>
+      <form class="eingabe" id="sonder-form" style="margin-top:10px;">
+        <label>Name
+          <input type="text" id="sonder-name" required placeholder="z. B. Tankrabatt 2027">
+        </label>
+        <label>Start
+          <input type="date" id="sonder-start" required>
+        </label>
+        <label>Ende
+          <input type="date" id="sonder-ende" required>
+        </label>
+        <label>Beschreibung
+          <input type="text" id="sonder-beschreibung" placeholder="optional">
+        </label>
+        <label style="justify-content:flex-end;">
+          <button type="submit" class="secondary">Eintragen</button>
+        </label>
+      </form>
+    </details>
+  </div>
 </main>
 
 <script src="config.js"></script>

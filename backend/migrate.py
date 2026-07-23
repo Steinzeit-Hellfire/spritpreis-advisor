@@ -36,6 +36,14 @@ CREATE TABLE IF NOT EXISTS routen_vorlagen (
     distanz_km REAL,
     erstellt_am INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS sondereffekte (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    start_datum TEXT NOT NULL,
+    end_datum TEXT NOT NULL,
+    beschreibung TEXT,
+    erstellt_am INTEGER NOT NULL
+);
 """
 
 if __name__ == "__main__":
@@ -61,6 +69,26 @@ if __name__ == "__main__":
         print("Unique-Index auf fuel_prices ergänzt (verhindert Duplikate beim Import)")
     except sqlite3.IntegrityError as e:
         print(f"Konnte Unique-Index nicht anlegen, vermutlich existierende Duplikate: {e}")
+
+    vorhanden = conn.execute(
+        "SELECT COUNT(*) FROM sondereffekte WHERE name = 'Tankrabatt Mai/Juni 2026'"
+    ).fetchone()[0]
+    if vorhanden == 0:
+        import time
+        conn.execute(
+            "INSERT INTO sondereffekte (name, start_datum, end_datum, beschreibung, erstellt_am) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                "Tankrabatt Mai/Juni 2026",
+                "2026-05-01",
+                "2026-06-30",
+                "Befristete Energiesteuersenkung (~17 Ct/L), automatisch bei der Migration eingetragen.",
+                int(time.time()),
+            ),
+        )
+        print("Sondereffekt 'Tankrabatt Mai/Juni 2026' angelegt")
+    else:
+        print("Sondereffekt 'Tankrabatt Mai/Juni 2026' existiert bereits - übersprungen")
 
     conn.commit()
     conn.close()
