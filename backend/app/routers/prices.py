@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from ..database import get_connection
 from ..recommend import get_comparison
+from ..ml_predict import verlauf_und_prognose
 from ..tankerkoenig import TankerkoenigClient
 from ..config import settings
 
@@ -23,6 +24,13 @@ class StationCreate(BaseModel):
 def preisvergleich():
     """Aktueller Vergleich aller Favoriten-Stationen inkl. Einschätzung."""
     return get_comparison()
+
+
+@router.get("/prices/verlauf/{station_id}")
+def preis_verlauf(station_id: int, tage_zurueck: int = 14):
+    """Tatsächliche Preishistorie + 24h-KI-Prognose zum Nachvollziehen,
+    wie die Prognose zustande kommt (Transparenz statt Blackbox)."""
+    return verlauf_und_prognose(station_id, tage_zurueck)
 
 
 @router.get("/stations")

@@ -87,6 +87,14 @@
       <tbody></tbody>
     </table>
   </div>
+  <div class="section-title" id="verlauf-titel" style="display:none;">Verlauf & Prognose</div>
+  <div class="glass-card" id="verlauf-card" style="display:none;">
+    <canvas id="verlauf-chart" height="90"></canvas>
+    <p class="hinweis" style="margin-top:10px;">
+      Durchgezogene Linie: tatsächlich gemessene Preise. Gestrichelte Linie: KI-Prognose für die nächsten 24h.
+    </p>
+  </div>
+
   <div class="section-title">Sondereffekte (z. B. Tankrabatt)</div>
   <p class="hinweis" id="sonder-admin-hinweis" style="display:none;">
     Verwaltung nur für Admin. Trag hier befristete Ereignisse ein, die Preise
@@ -118,6 +126,8 @@
   </div>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script src="config.js"></script>
 <script src="js/matomo.js"></script>
 <script src="js/dashboard.js"></script>

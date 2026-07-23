@@ -2,10 +2,12 @@
 nächsten 24 Stunden zu erstellen: zu welcher Uhrzeit wird der Preis
 voraussichtlich am niedrigsten sein."""
 import pickle
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from .config import settings
+from .database import get_connection
 
 MODEL_DIR = Path(settings.db_path).resolve().parent / "modelle"
 
@@ -63,3 +65,37 @@ def prognose_24h(station_id: int, aktueller_preis: float | None = None) -> dict 
         "in_stunden": round((beste_zeit - jetzt).total_seconds() / 3600, 1),
         "jetzt_am_besten": False,
     }
+
+
+def verlauf_und_prognose(station_id: int, tage_zurueck: int = 14) -> dict:
+    """Tatsächliche Preishistorie der letzten X Tage plus 24h-Prognose in
+    die Zukunft - zur Transparenz, damit man dem Modell "auf die Finger
+    schauen" kann statt nur das Endergebnis (den einen "besten" Zeitpunkt)
+    zu sehen."""
+    conn = get_connection()
+    ab_zeitpunkt = int(time.time()) - tage_zurueck * 86400
+    rows = conn.execute(
+        """SELECT price, timestamp FROM fuel_prices
+           WHERE station_id = ? AND is_open = 1 AND timestamp >= ?
+           ORDER BY timestamp""",
+        (station_id, ab_zeitpunkt),
+    ).fetchall()
+    conn.close()
+
+    tatsaechlich = [
+        {"zeitpunkt": datetime.fromtimestamp(r["timestamp"]).isoformat(), "preis": r["price"]}
+        for r in rows
+    ]
+
+    modell = _modell_laden(station_id)
+    prognose_kurve = []
+    if modell is not None:
+        jetzt = datetime.now()
+        for stunden_versatz in range(25):  # inkl. "jetzt" (0) bis +24h
+            zeitpunkt = jetzt + timedelta(hours=stunden_versatz)
+            tag_absolut = int(zeitpunkt.timestamp() // 86400)
+            merkmale = [[zeitpunkt.hour, zeitpunkt.weekday(), tag_absolut]]
+            vorhersage = float(modell.predict(merkmale)[0])
+            prognose_kurve.append({"zeitpunkt": zeitpunkt.isoformat(), "preis": round(vorhersage, 3)})
+
+    return {"tatsaechlich": tatsaechlich, "prognose": prognose_kurve}

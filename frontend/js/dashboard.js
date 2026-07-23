@@ -90,6 +90,7 @@ async function ladePreisvergleich() {
           <span class="ampel ${ampelKlasse(s.status)}">${s.status}</span>
           ${s.basis ? `<p class="hinweis" style="margin-top:6px;">${s.basis}</p>` : ""}
           ${s.prognose ? `<p class="hinweis" style="margin-top:4px; color: var(--accent);">📈 ${s.prognose.jetzt_am_besten ? "Prognose: jetzt ist schon dein bestes Zeitfenster für die nächsten 24h" : `Prognose: ${s.prognose.prognostizierter_preis.toFixed(3)} € gegen ${s.prognose.beste_uhrzeit} (in ${s.prognose.in_stunden}h)`}</p>` : ""}
+          ${s.prognose ? `<button class="secondary" style="margin-top:8px; font-size:0.78rem; padding:5px 10px;" data-verlauf-id="${s.station_id}">Verlauf & Prognose anzeigen</button>` : ""}
           ${s.lat != null ? `<p style="margin-top:8px;">${wazeLink(s.lat, s.lng, `eta-station-${s.station_id}`)}</p>` : ""}
         </div>
         <div class="preis">${s.aktueller_preis != null ? s.aktueller_preis.toFixed(3) + " €" : "–"}</div>
@@ -102,6 +103,10 @@ async function ladePreisvergleich() {
         if (s.lat != null) etaAnzeigen(s.lat, s.lng, `eta-station-${s.station_id}`);
       });
     }
+
+    container.querySelectorAll("button[data-verlauf-id]").forEach(btn => {
+      btn.addEventListener("click", () => verlaufAnzeigen(btn.dataset.verlaufId));
+    });
   } catch (e) {
     container.innerHTML = `<p class="leer">Preise konnten nicht geladen werden. Läuft der Poller? Ist der API-Key gesetzt?</p>`;
   }
@@ -275,3 +280,66 @@ document.getElementById("sonder-form").addEventListener("submit", async (ev) => 
   meinStandort = await standortAnfordern();
   if (meinStandort) ladePreisvergleich(); // ETA nachladen, sobald Standort da ist
 })();
+
+let verlaufChart = null;
+
+async function verlaufAnzeigen(stationId) {
+  document.getElementById("verlauf-titel").style.display = "";
+  document.getElementById("verlauf-card").style.display = "";
+
+  const res = await fetch(`${API}/prices/verlauf/${stationId}?tage_zurueck=14`);
+  const daten = await res.json();
+
+  const tatsaechlichPunkte = daten.tatsaechlich.map(p => ({ x: p.zeitpunkt, y: p.preis }));
+  const prognosePunkte = daten.prognose.map(p => ({ x: p.zeitpunkt, y: p.preis }));
+
+  const ctx = document.getElementById("verlauf-chart").getContext("2d");
+  if (verlaufChart) verlaufChart.destroy();
+
+  verlaufChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      datasets: [
+        {
+          label: "Tatsächlicher Preis",
+          data: tatsaechlichPunkte,
+          borderColor: "#38bdf8",
+          backgroundColor: "transparent",
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
+        {
+          label: "KI-Prognose (24h)",
+          data: prognosePunkte,
+          borderColor: "#fbbf24",
+          backgroundColor: "transparent",
+          borderDash: [6, 4],
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          type: "time",
+          time: { unit: "day" },
+          ticks: { color: "#8b93a8" },
+          grid: { color: "rgba(255,255,255,0.06)" },
+        },
+        y: {
+          ticks: { color: "#8b93a8" },
+          grid: { color: "rgba(255,255,255,0.06)" },
+        },
+      },
+      plugins: {
+        legend: { labels: { color: "#e8ecf4" } },
+      },
+    },
+  });
+
+  document.getElementById("verlauf-card").scrollIntoView({ behavior: "smooth", block: "center" });
+}

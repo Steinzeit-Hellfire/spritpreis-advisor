@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .env
 *.db
+*.log
 .venv/
 backend/uploads/
 frontend/config.js
