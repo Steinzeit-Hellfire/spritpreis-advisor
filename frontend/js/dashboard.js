@@ -299,6 +299,7 @@ let verlaufChart = null;
 let letzteVerlaufDaten = null;
 let yAchseAbNull = false;
 let rueckblickSichtbar = true;
+let tatsaechlichSichtbar = true;
 
 document.getElementById("btn-y-achse-toggle").addEventListener("click", () => {
   yAchseAbNull = !yAchseAbNull;
@@ -309,6 +310,12 @@ document.getElementById("btn-y-achse-toggle").addEventListener("click", () => {
 document.getElementById("btn-rueckblick-toggle").addEventListener("click", () => {
   rueckblickSichtbar = !rueckblickSichtbar;
   document.getElementById("btn-rueckblick-toggle").textContent = rueckblickSichtbar ? "KI-Rückblick ausblenden" : "KI-Rückblick einblenden";
+  if (letzteVerlaufDaten) chartZeichnen(letzteVerlaufDaten);
+});
+
+document.getElementById("btn-tatsaechlich-toggle").addEventListener("click", () => {
+  tatsaechlichSichtbar = !tatsaechlichSichtbar;
+  document.getElementById("btn-tatsaechlich-toggle").textContent = tatsaechlichSichtbar ? "Tatsächlicher Preis ausblenden" : "Tatsächlicher Preis einblenden";
   if (letzteVerlaufDaten) chartZeichnen(letzteVerlaufDaten);
 });
 
@@ -347,22 +354,23 @@ function chartZeichnen(daten) {
     data: {
       datasets: [
         {
-          label: "Tatsächlicher Preis",
+          label: "Tatsächlicher Preis (zum Abgleich)",
           data: tatsaechlichPunkte,
           borderColor: "#38bdf8",
           backgroundColor: "transparent",
+          borderDash: [3, 3],
           pointRadius: 0,
-          borderWidth: 2,
+          borderWidth: 1.5,
           tension: 0.1,
+          hidden: !tatsaechlichSichtbar,
         },
         {
           label: "KI-Rückblick (Modellschätzung Vergangenheit)",
           data: rueckblickPunkte,
           borderColor: "#c084fc",
           backgroundColor: "transparent",
-          borderDash: [2, 3],
           pointRadius: 0,
-          borderWidth: 1.5,
+          borderWidth: 2.5,
           tension: 0.1,
           hidden: !rueckblickSichtbar,
         },

@@ -94,7 +94,10 @@
   </div>
   <div class="section-title" id="verlauf-titel" style="display:none;">Verlauf & Prognose</div>
   <div class="glass-card" id="verlauf-card" style="display:none;">
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:8px;">
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
+      <button class="secondary" id="btn-tatsaechlich-toggle" type="button" style="font-size:0.78rem; padding:5px 10px;">
+        Tatsächlicher Preis ausblenden
+      </button>
       <button class="secondary" id="btn-rueckblick-toggle" type="button" style="font-size:0.78rem; padding:5px 10px;">
         KI-Rückblick ausblenden
       </button>
@@ -104,10 +107,11 @@
     </div>
     <canvas id="verlauf-chart" height="90"></canvas>
     <p class="hinweis" style="margin-top:10px;">
-      Durchgezogene blaue Linie: tatsächlich gemessene Preise. Gestrichelte gelbe Linie:
-      KI-Prognose für die nächsten 24h. Gepunktete lila Linie: was das Modell
-      für die Vergangenheit vorhergesagt hätte (Rückblick, zeigt Modellgüte) –
-      lässt sich oben ein-/ausblenden, falls sie sich mit der echten Linie überlappt.
+      Durchgezogene lila Linie: KI-Rückblick, was das Modell für die Vergangenheit
+      vorhergesagt hätte (primäre Ansicht). Gepunktete blaue Linie: tatsächlich
+      gemessene Preise, zum Abgleich dazuschaltbar. Gestrichelte gelbe Linie:
+      KI-Prognose für die nächsten 24h. Alle drei Linien lassen sich oben
+      unabhängig ein-/ausblenden.
     </p>
     <p class="hinweis" id="verlauf-genauigkeit" style="margin-top:6px;"></p>
   </div>
