@@ -296,6 +296,14 @@ document.getElementById("sonder-form").addEventListener("submit", async (ev) => 
 })();
 
 let verlaufChart = null;
+let letzteVerlaufDaten = null;
+let yAchseAbNull = false;
+
+document.getElementById("btn-y-achse-toggle").addEventListener("click", () => {
+  yAchseAbNull = !yAchseAbNull;
+  document.getElementById("btn-y-achse-toggle").textContent = yAchseAbNull ? "Y-Achse automatisch" : "Y-Achse ab 0 €";
+  if (letzteVerlaufDaten) chartZeichnen(letzteVerlaufDaten);
+});
 
 async function verlaufAnzeigen(stationId) {
   document.getElementById("verlauf-titel").style.display = "";
@@ -303,10 +311,7 @@ async function verlaufAnzeigen(stationId) {
 
   const res = await fetch(`${API}/prices/verlauf/${stationId}?kraftstoff=${aktuellerKraftstoff}&tage_zurueck=14`);
   const daten = await res.json();
-
-  const tatsaechlichPunkte = daten.tatsaechlich.map(p => ({ x: p.zeitpunkt, y: p.preis }));
-  const rueckblickPunkte = daten.modell_rueckblick.map(p => ({ x: p.zeitpunkt, y: p.preis }));
-  const prognosePunkte = daten.prognose.map(p => ({ x: p.zeitpunkt, y: p.preis }));
+  letzteVerlaufDaten = daten;
 
   const genauigkeitEl = document.getElementById("verlauf-genauigkeit");
   if (daten.genauigkeit) {
@@ -317,6 +322,15 @@ async function verlaufAnzeigen(stationId) {
   } else {
     genauigkeitEl.textContent = "Noch kein Modell für diese Kraftstoffart trainiert.";
   }
+
+  chartZeichnen(daten);
+  document.getElementById("verlauf-card").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function chartZeichnen(daten) {
+  const tatsaechlichPunkte = daten.tatsaechlich.map(p => ({ x: p.zeitpunkt, y: p.preis }));
+  const rueckblickPunkte = daten.modell_rueckblick.map(p => ({ x: p.zeitpunkt, y: p.preis }));
+  const prognosePunkte = daten.prognose.map(p => ({ x: p.zeitpunkt, y: p.preis }));
 
   const ctx = document.getElementById("verlauf-chart").getContext("2d");
   if (verlaufChart) verlaufChart.destroy();
@@ -366,6 +380,7 @@ async function verlaufAnzeigen(stationId) {
           grid: { color: "rgba(255,255,255,0.06)" },
         },
         y: {
+          min: yAchseAbNull ? 0 : undefined,
           ticks: { color: "#8b93a8" },
           grid: { color: "rgba(255,255,255,0.06)" },
         },
@@ -375,6 +390,4 @@ async function verlaufAnzeigen(stationId) {
       },
     },
   });
-
-  document.getElementById("verlauf-card").scrollIntoView({ behavior: "smooth", block: "center" });
 }
