@@ -298,10 +298,17 @@ document.getElementById("sonder-form").addEventListener("submit", async (ev) => 
 let verlaufChart = null;
 let letzteVerlaufDaten = null;
 let yAchseAbNull = false;
+let rueckblickSichtbar = true;
 
 document.getElementById("btn-y-achse-toggle").addEventListener("click", () => {
   yAchseAbNull = !yAchseAbNull;
   document.getElementById("btn-y-achse-toggle").textContent = yAchseAbNull ? "Y-Achse automatisch" : "Y-Achse ab 0 €";
+  if (letzteVerlaufDaten) chartZeichnen(letzteVerlaufDaten);
+});
+
+document.getElementById("btn-rueckblick-toggle").addEventListener("click", () => {
+  rueckblickSichtbar = !rueckblickSichtbar;
+  document.getElementById("btn-rueckblick-toggle").textContent = rueckblickSichtbar ? "KI-Rückblick ausblenden" : "KI-Rückblick einblenden";
   if (letzteVerlaufDaten) chartZeichnen(letzteVerlaufDaten);
 });
 
@@ -351,12 +358,13 @@ function chartZeichnen(daten) {
         {
           label: "KI-Rückblick (Modellschätzung Vergangenheit)",
           data: rueckblickPunkte,
-          borderColor: "#8b93a8",
+          borderColor: "#c084fc",
           backgroundColor: "transparent",
           borderDash: [2, 3],
           pointRadius: 0,
           borderWidth: 1.5,
           tension: 0.1,
+          hidden: !rueckblickSichtbar,
         },
         {
           label: "KI-Prognose (24h Zukunft)",
