@@ -3,10 +3,12 @@ from .config import settings
 from .database import get_connection
 from .tankerkoenig import TankerkoenigClient
 
+KRAFTSTOFFARTEN = ("e5", "e10", "diesel")
+
 
 def poll_once() -> int:
-    """Fragt einmalig die Preise aller Favoriten-Stationen ab und speichert sie.
-    Gibt die Anzahl gespeicherter Preis-Datenpunkte zurück."""
+    """Fragt einmalig die Preise aller Favoriten-Stationen ab (E5, E10, Diesel)
+    und speichert sie. Gibt die Anzahl gespeicherter Preis-Datenpunkte zurück."""
     conn = get_connection()
     rows = conn.execute(
         "SELECT id, tankerkoenig_id FROM stations WHERE ist_favorit = 1"
@@ -28,13 +30,18 @@ def poll_once() -> int:
         if local_id is None:
             continue
         is_open = 1 if info.get("status") == "open" else 0
-        preis = info.get("e5")
-        conn.execute(
-            "INSERT OR IGNORE INTO fuel_prices (station_id, fuel_type, price, is_open, timestamp) "
-            "VALUES (?, 'e5', ?, ?, ?)",
-            (local_id, preis, is_open, now),
-        )
-        gespeichert += 1
+
+        for kraftstoff in KRAFTSTOFFARTEN:
+            preis = info.get(kraftstoff)
+            if preis is None:
+                continue
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO fuel_prices (station_id, fuel_type, price, is_open, timestamp) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (local_id, kraftstoff, preis, is_open, now),
+            )
+            if cur.rowcount:
+                gespeichert += 1
 
     conn.commit()
     conn.close()

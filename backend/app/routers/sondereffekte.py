@@ -18,6 +18,7 @@ class SondereffektCreate(BaseModel):
     name: str
     start_datum: str  # ISO-Datum, z.B. 2026-05-01
     end_datum: str    # ISO-Datum, inklusive
+    kraftstoff: str | None = None  # 'e5'/'e10'/'diesel' oder None = alle Sorten
     beschreibung: str | None = None
 
 
@@ -36,8 +37,9 @@ def sondereffekt_anlegen(effekt: SondereffektCreate, request: Request):
     _require_admin(request)
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO sondereffekte (name, start_datum, end_datum, beschreibung, erstellt_am) VALUES (?, ?, ?, ?, ?)",
-        (effekt.name, effekt.start_datum, effekt.end_datum, effekt.beschreibung, int(time.time())),
+        "INSERT INTO sondereffekte (name, start_datum, end_datum, kraftstoff, beschreibung, erstellt_am) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (effekt.name, effekt.start_datum, effekt.end_datum, effekt.kraftstoff, effekt.beschreibung, int(time.time())),
     )
     conn.commit()
     neue_id = cur.lastrowid

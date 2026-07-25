@@ -14,36 +14,35 @@ def _ausschluss_bedingung(zeitraeume: list[tuple[int, int]]) -> tuple[str, list]
     return "AND " + " AND ".join(teile), params
 
 
-def get_comparison() -> dict:
-    """Vergleicht die aktuellen Preise aller Favoriten-Stationen und gibt für jede
-    eine Einschätzung zurück, ob der Preis gerade günstig ist.
+def get_comparison(kraftstoff: str = "e5") -> dict:
+    """Vergleicht die aktuellen Preise aller Favoriten-Stationen für die
+    angegebene Kraftstoffart (e5/e10/diesel) und gibt für jede eine
+    Einschätzung zurück, ob der Preis gerade günstig ist.
 
     Zweistufig, damit von Anfang an eine brauchbare Aussage da ist:
-    1. Sobald an mind. 3 verschiedenen Tagen zur selben Uhrzeit Daten vorliegen
-       (braucht ein paar Tage Laufzeit): Vergleich gegen den Schnitt genau
-       dieser Wochenstunde - das ist die eigentlich aussagekräftige Einschätzung.
-    2. Bis dahin: Vergleich gegen den bisherigen Gesamtschnitt der Station
-       (braucht nur 3 Datenpunkte, also ~15 Minuten Laufzeit) - grob, aber
-       besser als "keine Historie".
+    1. Sobald an mind. 3 verschiedenen Tagen zur selben Uhrzeit Daten vorliegen:
+       Vergleich gegen den Schnitt genau dieser Wochenstunde.
+    2. Bis dahin: Vergleich gegen den bisherigen Gesamtschnitt der Station.
 
     Zeiträume aus der Tabelle "sondereffekte" (z.B. Tankrabatt) werden aus
     beiden Berechnungen ausgeschlossen, siehe app/sondereffekte.py.
     """
     conn = get_connection()
-    ausschluesse = lade_ausschlusszeitraeume()
+    ausschluesse = lade_ausschlusszeitraeume(kraftstoff)
     bedingung, ausschluss_params = _ausschluss_bedingung(ausschluesse)
 
     aktuelle_preise = conn.execute(
         """
         SELECT s.id, s.name, s.marke, s.adresse, s.lat, s.lng, fp.price, fp.is_open, fp.timestamp
         FROM stations s
-        JOIN fuel_prices fp ON fp.station_id = s.id
+        JOIN fuel_prices fp ON fp.station_id = s.id AND fp.fuel_type = ?
         WHERE s.ist_favorit = 1
           AND fp.timestamp = (
-              SELECT MAX(timestamp) FROM fuel_prices WHERE station_id = s.id
+              SELECT MAX(timestamp) FROM fuel_prices WHERE station_id = s.id AND fuel_type = ?
           )
         ORDER BY fp.price ASC
-        """
+        """,
+        (kraftstoff, kraftstoff),
     ).fetchall()
 
     stunde = f"{datetime.now().hour:02d}"
@@ -55,21 +54,21 @@ def get_comparison() -> dict:
             SELECT AVG(price) AS avg_price,
                    COUNT(DISTINCT date(timestamp, 'unixepoch')) AS tage
             FROM fuel_prices
-            WHERE station_id = ? AND is_open = 1
+            WHERE station_id = ? AND fuel_type = ? AND is_open = 1
               AND strftime('%H', datetime(timestamp, 'unixepoch')) = ?
               {bedingung}
             """,
-            (row["id"], stunde, *ausschluss_params),
+            (row["id"], kraftstoff, stunde, *ausschluss_params),
         ).fetchone()
 
         gesamt_stat = conn.execute(
             f"""
             SELECT AVG(price) AS avg_price, COUNT(*) AS n
             FROM fuel_prices
-            WHERE station_id = ? AND is_open = 1
+            WHERE station_id = ? AND fuel_type = ? AND is_open = 1
               {bedingung}
             """,
-            (row["id"], *ausschluss_params),
+            (row["id"], kraftstoff, *ausschluss_params),
         ).fetchone()
 
         if stunden_stat["tage"] and stunden_stat["tage"] >= 3:
@@ -104,7 +103,7 @@ def get_comparison() -> dict:
                 "vergleichswert": round(vergleichswert, 3) if vergleichswert else None,
                 "basis": basis,
                 "status": status,
-                "prognose": prognose_24h(row["id"], aktueller_preis=row["price"]),
+                "prognose": prognose_24h(row["id"], kraftstoff, aktueller_preis=row["price"]),
             }
         )
 

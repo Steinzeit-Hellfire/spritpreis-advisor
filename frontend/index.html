@@ -19,6 +19,11 @@
 
 <main>
   <div class="section-title">Aktueller Vergleich</div>
+  <div class="toolbar-reihe" style="margin-bottom:14px;">
+    <button class="secondary aktiv" data-kraftstoff="e5" id="tab-e5">Super E5</button>
+    <button class="secondary" data-kraftstoff="e10" id="tab-e10">Super E10</button>
+    <button class="secondary" data-kraftstoff="diesel" id="tab-diesel">Diesel</button>
+  </div>
   <div id="stationen-liste"><p class="leer">Lade Preise…</p></div>
 
   <div class="section-title">Tankvorgang eintragen</div>
@@ -91,8 +96,11 @@
   <div class="glass-card" id="verlauf-card" style="display:none;">
     <canvas id="verlauf-chart" height="90"></canvas>
     <p class="hinweis" style="margin-top:10px;">
-      Durchgezogene Linie: tatsächlich gemessene Preise. Gestrichelte Linie: KI-Prognose für die nächsten 24h.
+      Durchgezogene Linie: tatsächlich gemessene Preise. Gestrichelte gelbe Linie:
+      KI-Prognose für die nächsten 24h. Gepunktete graue Linie: was das Modell
+      für die Vergangenheit vorhergesagt hätte (Rückblick, zeigt Modellgüte).
     </p>
+    <p class="hinweis" id="verlauf-genauigkeit" style="margin-top:6px;"></p>
   </div>
 
   <div class="section-title">Sondereffekte (z. B. Tankrabatt)</div>
@@ -114,6 +122,14 @@
         </label>
         <label>Ende
           <input type="date" id="sonder-ende" required>
+        </label>
+        <label>Kraftstoff
+          <select id="sonder-kraftstoff">
+            <option value="">Alle Sorten</option>
+            <option value="e5">Nur Super E5</option>
+            <option value="e10">Nur Super E10</option>
+            <option value="diesel">Nur Diesel</option>
+          </select>
         </label>
         <label>Beschreibung
           <input type="text" id="sonder-beschreibung" placeholder="optional">

@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS sondereffekte (
     name TEXT NOT NULL,
     start_datum TEXT NOT NULL,     -- ISO-Datum, z.B. 2026-05-01
     end_datum TEXT NOT NULL,       -- ISO-Datum, inklusive, z.B. 2026-06-30
+    kraftstoff TEXT,               -- 'e5'/'e10'/'diesel' oder NULL = gilt für alle Sorten
     beschreibung TEXT,
     erstellt_am INTEGER NOT NULL
 );

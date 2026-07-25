@@ -197,6 +197,17 @@ td.zahl, th.zahl { text-align: right; font-family: var(--font-data); }
 .leaflet-control-layers-toggle { filter: invert(1) hue-rotate(180deg); }
 .leaflet-control-layers label { color: var(--text-primary); }
 
+.toolbar-reihe {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.toolbar-reihe button.aktiv {
+  background: var(--accent);
+  color: #0b1120;
+  border-color: var(--accent);
+}
+
 .waze-link {
   display: inline-flex;
   align-items: center;

@@ -21,16 +21,17 @@ class StationCreate(BaseModel):
 
 
 @router.get("/prices/comparison")
-def preisvergleich():
-    """Aktueller Vergleich aller Favoriten-Stationen inkl. Einschätzung."""
-    return get_comparison()
+def preisvergleich(kraftstoff: str = "e5"):
+    """Aktueller Vergleich aller Favoriten-Stationen inkl. Einschätzung,
+    für die angegebene Kraftstoffart (e5/e10/diesel)."""
+    return get_comparison(kraftstoff)
 
 
 @router.get("/prices/verlauf/{station_id}")
-def preis_verlauf(station_id: int, tage_zurueck: int = 14):
-    """Tatsächliche Preishistorie + 24h-KI-Prognose zum Nachvollziehen,
-    wie die Prognose zustande kommt (Transparenz statt Blackbox)."""
-    return verlauf_und_prognose(station_id, tage_zurueck)
+def preis_verlauf(station_id: int, kraftstoff: str = "e5", tage_zurueck: int = 14):
+    """Tatsächliche Preishistorie + Modell-Rückblick + 24h-KI-Prognose zum
+    Nachvollziehen, wie die Prognose zustande kommt (Transparenz statt Blackbox)."""
+    return verlauf_und_prognose(station_id, kraftstoff, tage_zurueck)
 
 
 @router.get("/stations")

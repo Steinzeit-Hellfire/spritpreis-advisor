@@ -1,5 +1,6 @@
 const API = "/api";
 let istAdmin = false;
+let aktuellerKraftstoff = "e5";
 
 async function pruefeAdminStatus() {
   try {
@@ -72,7 +73,7 @@ async function etaAnzeigen(zielLat, zielLng, containerId) {
 async function ladePreisvergleich() {
   const container = document.getElementById("stationen-liste");
   try {
-    const res = await fetch(`${API}/prices/comparison`);
+    const res = await fetch(`${API}/prices/comparison?kraftstoff=${aktuellerKraftstoff}`);
     const data = await res.json();
 
     if (!data.stationen.length) {
@@ -111,6 +112,17 @@ async function ladePreisvergleich() {
     container.innerHTML = `<p class="leer">Preise konnten nicht geladen werden. Läuft der Poller? Ist der API-Key gesetzt?</p>`;
   }
 }
+
+document.querySelectorAll(".toolbar-reihe button[data-kraftstoff]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    aktuellerKraftstoff = btn.dataset.kraftstoff;
+    document.querySelectorAll(".toolbar-reihe button[data-kraftstoff]").forEach(b => b.classList.remove("aktiv"));
+    btn.classList.add("aktiv");
+    document.getElementById("verlauf-card").style.display = "none";
+    document.getElementById("verlauf-titel").style.display = "none";
+    ladePreisvergleich();
+  });
+});
 
 async function ladeStationenDropdown() {
   const select = document.getElementById("f-station");
@@ -227,13 +239,14 @@ async function ladeSondereffekte() {
 
   container.innerHTML = `
     <table>
-      <thead><tr><th>Name</th><th>Von</th><th>Bis</th><th>Beschreibung</th>${istAdmin ? "<th></th>" : ""}</tr></thead>
+      <thead><tr><th>Name</th><th>Von</th><th>Bis</th><th>Kraftstoff</th><th>Beschreibung</th>${istAdmin ? "<th></th>" : ""}</tr></thead>
       <tbody>
         ${liste.map(s => `
           <tr>
             <td>${s.name}</td>
             <td>${s.start_datum}</td>
             <td>${s.end_datum}</td>
+            <td>${s.kraftstoff ? s.kraftstoff.toUpperCase() : "Alle Sorten"}</td>
             <td>${s.beschreibung ?? "–"}</td>
             ${istAdmin ? `<td><button class="secondary" data-loeschen-id="${s.id}">Löschen</button></td>` : ""}
           </tr>
@@ -257,6 +270,7 @@ document.getElementById("sonder-form").addEventListener("submit", async (ev) => 
     name: document.getElementById("sonder-name").value,
     start_datum: document.getElementById("sonder-start").value,
     end_datum: document.getElementById("sonder-ende").value,
+    kraftstoff: document.getElementById("sonder-kraftstoff").value || null,
     beschreibung: document.getElementById("sonder-beschreibung").value || null,
   };
   const res = await fetch(`${API}/sondereffekte`, {
@@ -287,11 +301,22 @@ async function verlaufAnzeigen(stationId) {
   document.getElementById("verlauf-titel").style.display = "";
   document.getElementById("verlauf-card").style.display = "";
 
-  const res = await fetch(`${API}/prices/verlauf/${stationId}?tage_zurueck=14`);
+  const res = await fetch(`${API}/prices/verlauf/${stationId}?kraftstoff=${aktuellerKraftstoff}&tage_zurueck=14`);
   const daten = await res.json();
 
   const tatsaechlichPunkte = daten.tatsaechlich.map(p => ({ x: p.zeitpunkt, y: p.preis }));
+  const rueckblickPunkte = daten.modell_rueckblick.map(p => ({ x: p.zeitpunkt, y: p.preis }));
   const prognosePunkte = daten.prognose.map(p => ({ x: p.zeitpunkt, y: p.preis }));
+
+  const genauigkeitEl = document.getElementById("verlauf-genauigkeit");
+  if (daten.genauigkeit) {
+    genauigkeitEl.textContent =
+      `Modellgüte über die letzten 14 Tage: im Schnitt ${daten.genauigkeit.mittlere_abweichung_ct} Ct Abweichung ` +
+      `≈ ${daten.genauigkeit.genauigkeit_prozent}% Genauigkeit (auf Basis von ${daten.genauigkeit.basis_anzahl_punkte} Datenpunkten). ` +
+      `Hinweis: Rückblick nutzt das aktuelle Modell auch für die Vergangenheit, ist also kein strenger Out-of-Sample-Test.`;
+  } else {
+    genauigkeitEl.textContent = "Noch kein Modell für diese Kraftstoffart trainiert.";
+  }
 
   const ctx = document.getElementById("verlauf-chart").getContext("2d");
   if (verlaufChart) verlaufChart.destroy();
@@ -310,7 +335,17 @@ async function verlaufAnzeigen(stationId) {
           tension: 0.1,
         },
         {
-          label: "KI-Prognose (24h)",
+          label: "KI-Rückblick (Modellschätzung Vergangenheit)",
+          data: rueckblickPunkte,
+          borderColor: "#8b93a8",
+          backgroundColor: "transparent",
+          borderDash: [2, 3],
+          pointRadius: 0,
+          borderWidth: 1.5,
+          tension: 0.1,
+        },
+        {
+          label: "KI-Prognose (24h Zukunft)",
           data: prognosePunkte,
           borderColor: "#fbbf24",
           backgroundColor: "transparent",

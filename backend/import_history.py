@@ -39,6 +39,9 @@ def parse_datum(wert: str) -> int:
     return int(dt.timestamp())
 
 
+KRAFTSTOFFARTEN = ("e5", "e10", "diesel")
+
+
 def importiere_datei(pfad: Path, uuid_zu_id: dict, conn) -> int:
     gespeichert = 0
     with pfad.open(newline="", encoding="utf-8") as f:
@@ -47,27 +50,29 @@ def importiere_datei(pfad: Path, uuid_zu_id: dict, conn) -> int:
             uuid = zeile.get("station_uuid", "").strip()
             if uuid not in uuid_zu_id:
                 continue
-            if zeile.get("e5change", "0") != "1":
-                continue  # E5-Preis hat sich in dieser Zeile nicht geändert
-            try:
-                preis = float(zeile["e5"])
-            except (KeyError, ValueError):
-                continue
-            if preis <= 0:
-                continue  # -1 o.ä. = ungültiger Preis
             try:
                 timestamp = parse_datum(zeile["date"])
             except Exception as e:
                 print(f"  Konnte Datum nicht parsen: {zeile.get('date')!r} ({e}) - übersprungen")
                 continue
 
-            cur = conn.execute(
-                "INSERT OR IGNORE INTO fuel_prices (station_id, fuel_type, price, is_open, timestamp) "
-                "VALUES (?, 'e5', ?, 1, ?)",
-                (uuid_zu_id[uuid], preis, timestamp),
-            )
-            if cur.rowcount:
-                gespeichert += 1
+            for kraftstoff in KRAFTSTOFFARTEN:
+                if zeile.get(f"{kraftstoff}change", "0") != "1":
+                    continue  # Preis dieser Sorte hat sich in dieser Zeile nicht geändert
+                try:
+                    preis = float(zeile[kraftstoff])
+                except (KeyError, ValueError):
+                    continue
+                if preis <= 0:
+                    continue  # -1 o.ä. = ungültiger Preis
+
+                cur = conn.execute(
+                    "INSERT OR IGNORE INTO fuel_prices (station_id, fuel_type, price, is_open, timestamp) "
+                    "VALUES (?, ?, ?, 1, ?)",
+                    (uuid_zu_id[uuid], kraftstoff, preis, timestamp),
+                )
+                if cur.rowcount:
+                    gespeichert += 1
     return gespeichert
 
 

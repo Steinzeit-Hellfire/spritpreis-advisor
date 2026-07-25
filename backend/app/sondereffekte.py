@@ -4,18 +4,25 @@ Steuersenkung/Tankrabatt), die den Preis künstlich verzerren und deshalb
 aus Statistik und ML-Training ausgeschlossen werden sollen.
 
 Der Admin pflegt diese selbst über die Weboberfläche/API - kein Code-Update
-nötig, wenn z.B. ein neuer Tankrabatt angekündigt wird.
+nötig, wenn z.B. ein neuer Tankrabatt angekündigt wird. Ein Sondereffekt
+kann sich auf eine einzelne Kraftstoffart beschränken (z.B. nur Diesel) oder,
+wenn kein Kraftstoff angegeben ist, für alle Sorten gelten.
 """
 from datetime import datetime, timedelta
 
 from .database import get_connection
 
 
-def lade_ausschlusszeitraeume() -> list[tuple[int, int]]:
+def lade_ausschlusszeitraeume(kraftstoff: str) -> list[tuple[int, int]]:
     """Gibt eine Liste von (start_ts, end_ts) Unix-Zeitstempel-Paaren zurück,
+    die für die angegebene Kraftstoffart gelten (kraftstoffspezifische
+    Einträge + Einträge ohne Kraftstoffangabe, die für alle Sorten gelten).
     end_ts jeweils exklusiv (also bis Ende des end_datum-Tages)."""
     conn = get_connection()
-    rows = conn.execute("SELECT start_datum, end_datum FROM sondereffekte").fetchall()
+    rows = conn.execute(
+        "SELECT start_datum, end_datum FROM sondereffekte WHERE kraftstoff IS NULL OR kraftstoff = ?",
+        (kraftstoff,),
+    ).fetchall()
     conn.close()
 
     zeitraeume = []

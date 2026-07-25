@@ -21,6 +21,9 @@ NEUE_SPALTEN = {
         ("fahrtzweck", "TEXT"),
         ("ist_freigegeben", "INTEGER NOT NULL DEFAULT 0"),
     ],
+    "sondereffekte": [
+        ("kraftstoff", "TEXT"),
+    ],
 }
 
 NEUE_TABELLEN = """
