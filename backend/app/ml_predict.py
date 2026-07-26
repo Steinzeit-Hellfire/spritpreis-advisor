@@ -65,11 +65,21 @@ def prognose_24h(station_id: int, kraftstoff: str = "e5", aktueller_preis: float
     }
 
 
+def _im_mittagsfenster(zeitpunkt: datetime) -> bool:
+    """Zeitfenster rund um den erlaubten Preissprung der 12-Uhr-Regel."""
+    beginn = zeitpunkt.replace(hour=11, minute=50, second=0, microsecond=0)
+    ende = zeitpunkt.replace(hour=13, minute=10, second=0, microsecond=0)
+    return beginn <= zeitpunkt <= ende
+
+
 def verlauf_und_prognose(station_id: int, kraftstoff: str = "e5", tage_zurueck: int = 14) -> dict:
     """Tatsächliche Preishistorie der letzten X Tage, das, was das AKTUELLE
     Modell für exakt diese vergangenen Zeitpunkte vorhergesagt hätte (Rückblick-
     Vergleich, um die Modellqualität sichtbar zu machen), plus die 24h-Prognose
-    in die Zukunft. Dazu eine grobe Genauigkeits-Kennzahl.
+    in die Zukunft. Dazu zwei Genauigkeits-Kennzahlen: insgesamt, und separat
+    fürs Mittagsfenster (11:50-13:10), in dem laut 12-Uhr-Regel der einzige
+    tägliche Preissprung erlaubt ist - dort ist die Modellgüte besonders
+    wichtig, weil sich hier am meisten ändert.
 
     Wichtig zur Einordnung: Der Rückblick nutzt das AKTUELLE, mit allen
     verfügbaren Daten trainierte Modell auch für die Vergangenheit - das ist
@@ -96,14 +106,20 @@ def verlauf_und_prognose(station_id: int, kraftstoff: str = "e5", tage_zurueck: 
     modell = _modell_laden(station_id, kraftstoff)
     modell_rueckblick = []
     genauigkeit = None
+    genauigkeit_mittag = None
 
     if modell is not None and rows:
         abweichungen = []
+        abweichungen_mittag = []
+
         for r in rows:
             zeitpunkt = datetime.fromtimestamp(r["timestamp"])
             geschaetzt = _vorhersage_fuer_zeitpunkt(modell, zeitpunkt)
             modell_rueckblick.append({"zeitpunkt": zeitpunkt.isoformat(), "preis": round(geschaetzt, 3)})
-            abweichungen.append(abs(geschaetzt - r["price"]))
+            abweichung = abs(geschaetzt - r["price"])
+            abweichungen.append(abweichung)
+            if _im_mittagsfenster(zeitpunkt):
+                abweichungen_mittag.append((abweichung, r["price"]))
 
         mittlere_abweichung = sum(abweichungen) / len(abweichungen)
         mittlerer_preis = sum(r["price"] for r in rows) / len(rows)
@@ -114,6 +130,16 @@ def verlauf_und_prognose(station_id: int, kraftstoff: str = "e5", tage_zurueck: 
             "genauigkeit_prozent": round(genauigkeit_prozent, 1),
             "basis_anzahl_punkte": len(rows),
         }
+
+        if abweichungen_mittag:
+            mittlere_abweichung_mittag = sum(a for a, _ in abweichungen_mittag) / len(abweichungen_mittag)
+            mittlerer_preis_mittag = sum(p for _, p in abweichungen_mittag) / len(abweichungen_mittag)
+            genauigkeit_mittag_prozent = max(0.0, 100 - (mittlere_abweichung_mittag / mittlerer_preis_mittag * 100))
+            genauigkeit_mittag = {
+                "mittlere_abweichung_ct": round(mittlere_abweichung_mittag * 100, 1),
+                "genauigkeit_prozent": round(genauigkeit_mittag_prozent, 1),
+                "basis_anzahl_punkte": len(abweichungen_mittag),
+            }
 
     prognose_kurve = []
     if modell is not None:
@@ -128,4 +154,5 @@ def verlauf_und_prognose(station_id: int, kraftstoff: str = "e5", tage_zurueck: 
         "modell_rueckblick": modell_rueckblick,
         "prognose": prognose_kurve,
         "genauigkeit": genauigkeit,
+        "genauigkeit_mittagsfenster": genauigkeit_mittag,
     }

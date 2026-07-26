@@ -337,6 +337,17 @@ async function verlaufAnzeigen(stationId) {
     genauigkeitEl.textContent = "Noch kein Modell für diese Kraftstoffart trainiert.";
   }
 
+  const mittagEl = document.getElementById("verlauf-genauigkeit-mittag");
+  if (daten.genauigkeit_mittagsfenster) {
+    const m = daten.genauigkeit_mittagsfenster;
+    mittagEl.textContent =
+      `🕛 Speziell im Mittagsfenster (11:50–13:10, der einzige laut 12-Uhr-Regel erlaubte Preissprung): ` +
+      `im Schnitt ${m.mittlere_abweichung_ct} Ct Abweichung ≈ ${m.genauigkeit_prozent}% Genauigkeit ` +
+      `(auf Basis von ${m.basis_anzahl_punkte} Datenpunkten in diesem Fenster).`;
+  } else {
+    mittagEl.textContent = "Für das Mittagsfenster liegen noch keine ausreichenden Daten vor.";
+  }
+
   chartZeichnen(daten);
   document.getElementById("verlauf-card").scrollIntoView({ behavior: "smooth", block: "center" });
 }
