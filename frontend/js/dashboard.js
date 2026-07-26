@@ -295,6 +295,10 @@ document.getElementById("sonder-form").addEventListener("submit", async (ev) => 
   if (meinStandort) ladePreisvergleich(); // ETA nachladen, sobald Standort da ist
 })();
 
+if (typeof Chart !== "undefined" && window["chartjs-plugin-annotation"]) {
+  Chart.register(window["chartjs-plugin-annotation"]);
+}
+
 let verlaufChart = null;
 let letzteVerlaufDaten = null;
 let yAchseAbNull = false;
@@ -332,6 +336,9 @@ async function verlaufAnzeigen(stationId) {
   const tageZurueck = document.getElementById("verlauf-zeitraum").value;
   const res = await fetch(`${API}/prices/verlauf/${stationId}?kraftstoff=${aktuellerKraftstoff}&tage_zurueck=${tageZurueck}`);
   const daten = await res.json();
+
+  const sonderRes = await fetch(`${API}/sondereffekte`);
+  daten.sondereffekte = await sonderRes.json();
   letzteVerlaufDaten = daten;
 
   const genauigkeitEl = document.getElementById("verlauf-genauigkeit");
@@ -363,6 +370,27 @@ function chartZeichnen(daten) {
   const tatsaechlichPunkte = daten.tatsaechlich.map(p => ({ x: p.zeitpunkt, y: p.preis }));
   const rueckblickPunkte = daten.modell_rueckblick.map(p => ({ x: p.zeitpunkt, y: p.preis }));
   const prognosePunkte = daten.prognose.map(p => ({ x: p.zeitpunkt, y: p.preis }));
+
+  const annotations = {};
+  (daten.sondereffekte || [])
+    .filter(s => !s.kraftstoff || s.kraftstoff === aktuellerKraftstoff)
+    .forEach((s, i) => {
+      annotations[`sondereffekt-${i}`] = {
+        type: "box",
+        xMin: s.start_datum,
+        xMax: s.end_datum,
+        backgroundColor: "rgba(248, 113, 113, 0.12)",
+        borderColor: "rgba(248, 113, 113, 0.4)",
+        borderWidth: 1,
+        label: {
+          display: true,
+          content: s.name,
+          position: "start",
+          color: "#f87171",
+          font: { size: 10 },
+        },
+      };
+    });
 
   const ctx = document.getElementById("verlauf-chart").getContext("2d");
   if (verlaufChart) verlaufChart.destroy();
@@ -421,6 +449,7 @@ function chartZeichnen(daten) {
       },
       plugins: {
         legend: { labels: { color: "#e8ecf4" } },
+        annotation: { annotations },
       },
     },
   });
