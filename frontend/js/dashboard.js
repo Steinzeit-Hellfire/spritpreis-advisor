@@ -120,6 +120,10 @@ document.querySelectorAll(".toolbar-reihe button[data-kraftstoff]").forEach(btn 
     btn.classList.add("aktiv");
     document.getElementById("verlauf-card").style.display = "none";
     document.getElementById("verlauf-titel").style.display = "none";
+    gen2Sichtbar = false;
+    letzteGen2Daten = null;
+    document.getElementById("btn-gen2-toggle").textContent = "🧪 KI Gen2 (Alpha) einblenden";
+    document.getElementById("verlauf-gen2-hinweis").style.display = "none";
     ladePreisvergleich();
   });
 });
@@ -304,6 +308,8 @@ let letzteVerlaufDaten = null;
 let yAchseAbNull = false;
 let rueckblickSichtbar = true;
 let tatsaechlichSichtbar = true;
+let gen2Sichtbar = false;
+let letzteGen2Daten = null;
 let aktuelleStationId = null;
 
 document.getElementById("verlauf-zeitraum").addEventListener("change", () => {
@@ -325,6 +331,39 @@ document.getElementById("btn-rueckblick-toggle").addEventListener("click", () =>
 document.getElementById("btn-tatsaechlich-toggle").addEventListener("click", () => {
   tatsaechlichSichtbar = !tatsaechlichSichtbar;
   document.getElementById("btn-tatsaechlich-toggle").textContent = tatsaechlichSichtbar ? "Tatsächlicher Preis ausblenden" : "Tatsächlicher Preis einblenden";
+  if (letzteVerlaufDaten) chartZeichnen(letzteVerlaufDaten);
+});
+
+document.getElementById("btn-gen2-toggle").addEventListener("click", async () => {
+  gen2Sichtbar = !gen2Sichtbar;
+  document.getElementById("btn-gen2-toggle").textContent = gen2Sichtbar ? "🧪 KI Gen2 (Alpha) ausblenden" : "🧪 KI Gen2 (Alpha) einblenden";
+  const gen2HinweisEl = document.getElementById("verlauf-gen2-hinweis");
+
+  if (gen2Sichtbar) {
+    const tageZurueck = document.getElementById("verlauf-zeitraum").value;
+    try {
+      const res = await fetch(`${API}/prices/verlauf-gen2/${aktuelleStationId}?kraftstoff=${aktuellerKraftstoff}&tage_zurueck=${tageZurueck}`);
+      if (!res.ok) {
+        gen2HinweisEl.style.display = "";
+        gen2HinweisEl.textContent = "🧪 Gen2 (Alpha): Für diese Kraftstoffart/Station noch nicht trainiert (siehe ml_train_gen2.py auf dem Server).";
+        letzteGen2Daten = null;
+      } else {
+        letzteGen2Daten = await res.json();
+        const oos = letzteGen2Daten.out_of_sample_genauigkeit;
+        gen2HinweisEl.style.display = "";
+        gen2HinweisEl.textContent = oos
+          ? `🧪 Gen2 (Alpha) – echter Out-of-Sample-Test: ${oos.genauigkeit_prozent}% Genauigkeit auf ${oos.n} Datenpunkten der letzten ${oos.holdout_tage} Tage, die das Modell nie im Training gesehen hat (ehrlicher als der Gen1-Rückblick).`
+          : "🧪 Gen2 (Alpha): Konfidenzband trainiert, aber noch keine Out-of-Sample-Zahl (zu wenig Historie für Holdout).";
+      }
+    } catch (e) {
+      gen2HinweisEl.style.display = "";
+      gen2HinweisEl.textContent = "🧪 Gen2 (Alpha): Fehler beim Laden.";
+      letzteGen2Daten = null;
+    }
+  } else {
+    gen2HinweisEl.style.display = "none";
+  }
+
   if (letzteVerlaufDaten) chartZeichnen(letzteVerlaufDaten);
 });
 
@@ -395,43 +434,82 @@ function chartZeichnen(daten) {
   const ctx = document.getElementById("verlauf-chart").getContext("2d");
   if (verlaufChart) verlaufChart.destroy();
 
+  const datasets = [
+    {
+      label: "Tatsächlicher Preis (zum Abgleich)",
+      data: tatsaechlichPunkte,
+      borderColor: "#38bdf8",
+      backgroundColor: "transparent",
+      borderDash: [3, 3],
+      pointRadius: 0,
+      borderWidth: 1.5,
+      tension: 0.1,
+      hidden: !tatsaechlichSichtbar,
+    },
+    {
+      label: "KI-Rückblick (Modellschätzung Vergangenheit)",
+      data: rueckblickPunkte,
+      borderColor: "#c084fc",
+      backgroundColor: "transparent",
+      pointRadius: 0,
+      borderWidth: 2.5,
+      tension: 0.1,
+      hidden: !rueckblickSichtbar,
+    },
+    {
+      label: "KI-Prognose (24h Zukunft)",
+      data: prognosePunkte,
+      borderColor: "#fbbf24",
+      backgroundColor: "transparent",
+      borderDash: [6, 4],
+      pointRadius: 0,
+      borderWidth: 2,
+      tension: 0.1,
+    },
+  ];
+
+  if (gen2Sichtbar && letzteGen2Daten) {
+    const oberPunkte = letzteGen2Daten.prognose_band.map(p => ({ x: p.zeitpunkt, y: p.upper }));
+    const unterPunkte = letzteGen2Daten.prognose_band.map(p => ({ x: p.zeitpunkt, y: p.lower }));
+    const medianPunkte = letzteGen2Daten.prognose_band.map(p => ({ x: p.zeitpunkt, y: p.median }));
+
+    datasets.push(
+      {
+        label: "Gen2 (Alpha): oberes Konfidenzband",
+        data: oberPunkte,
+        borderColor: "transparent",
+        backgroundColor: "rgba(52, 211, 153, 0.15)",
+        fill: "+1",
+        pointRadius: 0,
+        borderWidth: 0,
+        tension: 0.1,
+      },
+      {
+        label: "Gen2 (Alpha): unteres Konfidenzband",
+        data: unterPunkte,
+        borderColor: "transparent",
+        backgroundColor: "transparent",
+        fill: false,
+        pointRadius: 0,
+        borderWidth: 0,
+        tension: 0.1,
+      },
+      {
+        label: "Gen2 (Alpha): Median-Prognose",
+        data: medianPunkte,
+        borderColor: "#34d399",
+        backgroundColor: "transparent",
+        borderDash: [4, 2],
+        pointRadius: 0,
+        borderWidth: 2,
+        tension: 0.1,
+      }
+    );
+  }
+
   verlaufChart = new Chart(ctx, {
     type: "line",
-    data: {
-      datasets: [
-        {
-          label: "Tatsächlicher Preis (zum Abgleich)",
-          data: tatsaechlichPunkte,
-          borderColor: "#38bdf8",
-          backgroundColor: "transparent",
-          borderDash: [3, 3],
-          pointRadius: 0,
-          borderWidth: 1.5,
-          tension: 0.1,
-          hidden: !tatsaechlichSichtbar,
-        },
-        {
-          label: "KI-Rückblick (Modellschätzung Vergangenheit)",
-          data: rueckblickPunkte,
-          borderColor: "#c084fc",
-          backgroundColor: "transparent",
-          pointRadius: 0,
-          borderWidth: 2.5,
-          tension: 0.1,
-          hidden: !rueckblickSichtbar,
-        },
-        {
-          label: "KI-Prognose (24h Zukunft)",
-          data: prognosePunkte,
-          borderColor: "#fbbf24",
-          backgroundColor: "transparent",
-          borderDash: [6, 4],
-          pointRadius: 0,
-          borderWidth: 2,
-          tension: 0.1,
-        },
-      ],
-    },
+    data: { datasets },
     options: {
       responsive: true,
       scales: {

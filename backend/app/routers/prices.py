@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from ..database import get_connection
 from ..recommend import get_comparison
 from ..ml_predict import verlauf_und_prognose
+from ..ml_predict_gen2 import verlauf_und_prognose_gen2
 from ..tankerkoenig import TankerkoenigClient
 from ..config import settings
 
@@ -32,6 +33,18 @@ def preis_verlauf(station_id: int, kraftstoff: str = "e5", tage_zurueck: int = 1
     """Tatsächliche Preishistorie + Modell-Rückblick + 24h-KI-Prognose zum
     Nachvollziehen, wie die Prognose zustande kommt (Transparenz statt Blackbox)."""
     return verlauf_und_prognose(station_id, kraftstoff, tage_zurueck)
+
+
+@router.get("/prices/verlauf-gen2/{station_id}")
+def preis_verlauf_gen2(station_id: int, kraftstoff: str = "e5", tage_zurueck: int = 14):
+    """ALPHA: Experimentelles Zweitmodell mit Konfidenzband (10/50/90%-Quantile),
+    gleitendem 3-Tage-Trend-Merkmal und echter Out-of-Sample-Genauigkeit
+    (Holdout der letzten 7 Tage). Gibt null zurück, wenn noch nicht trainiert -
+    siehe ml_train_gen2.py."""
+    ergebnis = verlauf_und_prognose_gen2(station_id, kraftstoff, tage_zurueck)
+    if ergebnis is None:
+        raise HTTPException(status_code=404, detail="Noch kein Gen2-Modell trainiert (siehe ml_train_gen2.py)")
+    return ergebnis
 
 
 @router.get("/stations")
