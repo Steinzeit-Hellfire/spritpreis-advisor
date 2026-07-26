@@ -94,16 +94,24 @@
   </div>
   <div class="section-title" id="verlauf-titel" style="display:none;">Verlauf & Prognose</div>
   <div class="glass-card" id="verlauf-card" style="display:none;">
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
-      <button class="secondary" id="btn-tatsaechlich-toggle" type="button" style="font-size:0.78rem; padding:5px 10px;">
-        Tatsächlicher Preis ausblenden
-      </button>
-      <button class="secondary" id="btn-rueckblick-toggle" type="button" style="font-size:0.78rem; padding:5px 10px;">
-        KI-Rückblick ausblenden
-      </button>
-      <button class="secondary" id="btn-y-achse-toggle" type="button" style="font-size:0.78rem; padding:5px 10px;">
-        Y-Achse ab 0 €
-      </button>
+    <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
+      <select id="verlauf-zeitraum" style="max-width:160px;">
+        <option value="14">Letzte 14 Tage</option>
+        <option value="30">Letzte 30 Tage</option>
+        <option value="60">Letzte 60 Tage</option>
+        <option value="120">Letzte 120 Tage</option>
+      </select>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="secondary" id="btn-tatsaechlich-toggle" type="button" style="font-size:0.78rem; padding:5px 10px;">
+          Tatsächlicher Preis ausblenden
+        </button>
+        <button class="secondary" id="btn-rueckblick-toggle" type="button" style="font-size:0.78rem; padding:5px 10px;">
+          KI-Rückblick ausblenden
+        </button>
+        <button class="secondary" id="btn-y-achse-toggle" type="button" style="font-size:0.78rem; padding:5px 10px;">
+          Y-Achse ab 0 €
+        </button>
+      </div>
     </div>
     <canvas id="verlauf-chart" height="90"></canvas>
     <p class="hinweis" style="margin-top:10px;">
@@ -111,7 +119,9 @@
       vorhergesagt hätte (primäre Ansicht). Gepunktete blaue Linie: tatsächlich
       gemessene Preise, zum Abgleich dazuschaltbar. Gestrichelte gelbe Linie:
       KI-Prognose für die nächsten 24h. Alle drei Linien lassen sich oben
-      unabhängig ein-/ausblenden.
+      unabhängig ein-/ausblenden. Der gewählte Zeitraum betrifft nur die
+      Anzeige/Genauigkeitsprüfung hier - das KI-Modell selbst trainiert immer
+      auf deiner kompletten verfügbaren Historie, unabhängig davon.
     </p>
     <p class="hinweis" id="verlauf-genauigkeit" style="margin-top:6px;"></p>
     <p class="hinweis" id="verlauf-genauigkeit-mittag" style="margin-top:4px;"></p>

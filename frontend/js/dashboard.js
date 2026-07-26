@@ -300,6 +300,11 @@ let letzteVerlaufDaten = null;
 let yAchseAbNull = false;
 let rueckblickSichtbar = true;
 let tatsaechlichSichtbar = true;
+let aktuelleStationId = null;
+
+document.getElementById("verlauf-zeitraum").addEventListener("change", () => {
+  if (aktuelleStationId != null) verlaufAnzeigen(aktuelleStationId);
+});
 
 document.getElementById("btn-y-achse-toggle").addEventListener("click", () => {
   yAchseAbNull = !yAchseAbNull;
@@ -320,17 +325,19 @@ document.getElementById("btn-tatsaechlich-toggle").addEventListener("click", () 
 });
 
 async function verlaufAnzeigen(stationId) {
+  aktuelleStationId = stationId;
   document.getElementById("verlauf-titel").style.display = "";
   document.getElementById("verlauf-card").style.display = "";
 
-  const res = await fetch(`${API}/prices/verlauf/${stationId}?kraftstoff=${aktuellerKraftstoff}&tage_zurueck=14`);
+  const tageZurueck = document.getElementById("verlauf-zeitraum").value;
+  const res = await fetch(`${API}/prices/verlauf/${stationId}?kraftstoff=${aktuellerKraftstoff}&tage_zurueck=${tageZurueck}`);
   const daten = await res.json();
   letzteVerlaufDaten = daten;
 
   const genauigkeitEl = document.getElementById("verlauf-genauigkeit");
   if (daten.genauigkeit) {
     genauigkeitEl.textContent =
-      `Modellgüte über die letzten 14 Tage: im Schnitt ${daten.genauigkeit.mittlere_abweichung_ct} Ct Abweichung ` +
+      `Modellgüte über die letzten ${tageZurueck} Tage: im Schnitt ${daten.genauigkeit.mittlere_abweichung_ct} Ct Abweichung ` +
       `≈ ${daten.genauigkeit.genauigkeit_prozent}% Genauigkeit (auf Basis von ${daten.genauigkeit.basis_anzahl_punkte} Datenpunkten). ` +
       `Hinweis: Rückblick nutzt das aktuelle Modell auch für die Vergangenheit, ist also kein strenger Out-of-Sample-Test.`;
   } else {
