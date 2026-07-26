@@ -130,6 +130,57 @@ Zeile ergänzen (täglich um 3 Uhr):
 Das Backend liest die trainierten Modelle bei jeder Anfrage automatisch neu
 ein - kein Neustart nötig, wenn ein neues Modell dazukommt.
 
+### Einmaligen Testlauf planen (statt bis 3 Uhr nachts zu warten)
+
+`cron` ist für wiederkehrende Jobs gedacht - für einen einmaligen Test zu
+einem bestimmten Zeitpunkt (z.B. "heute in 10 Minuten" oder "morgen früh")
+ist `at` das richtige Werkzeug:
+
+```bash
+sudo apt install at
+sudo systemctl enable --now atd
+```
+
+Job einplanen:
+
+```bash
+echo "cd /pfad/zu/spritpreis-advisor/backend && .venv/bin/python ml_train.py >> ml_train.log 2>&1" | at 09:35
+```
+
+Eingeplante Jobs auflisten (zur Bestätigung, dass es geklappt hat):
+
+```bash
+atq
+```
+
+`at` versteht neben festen Uhrzeiten (`at 09:35`, `at 3pm`) auch relative
+und sprachliche Angaben, z.B.:
+
+```
+at now + 10 minutes
+at now + 2 hours
+at tomorrow
+at 3pm tomorrow
+at noon next monday
+```
+
+Vollständige Übersicht der möglichen Zeitangaben:
+[How to Use at Command for One-Time Task Scheduling](https://oneuptime.com/blog/post/2026-03-02-how-to-use-at-command-for-one-time-task-scheduling-on-ubuntu/view)
+(oder auf dem Pi direkt `man at`, Abschnitt "TIME SPECIFICATION").
+
+Nach der geplanten Zeit prüfen:
+
+```bash
+cat /pfad/zu/spritpreis-advisor/backend/ml_train.log
+```
+
+Und, falls der Job scheinbar gar nicht lief, ob `at`/`atd` ihn überhaupt
+ausgeführt hat:
+
+```bash
+grep -i "atd\|CRON" /var/log/syslog | tail -20
+```
+
 ## Historische Preisdaten importieren (optional, aber empfohlen)
 
 Statt wochenlang auf den Live-Poller zu warten, lassen sich Monate an echter
