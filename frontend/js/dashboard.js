@@ -410,6 +410,14 @@ function chartZeichnen(daten) {
   const rueckblickPunkte = daten.modell_rueckblick.map(p => ({ x: p.zeitpunkt, y: p.preis }));
   const prognosePunkte = daten.prognose.map(p => ({ x: p.zeitpunkt, y: p.preis }));
 
+  // Achsengrenzen explizit berechnen statt Chart.js' Auto-Erkennung zu vertrauen -
+  // beim Zerstören/Neuerstellen auf demselben Canvas übernimmt die Zeitachse sonst
+  // manchmal alte Grenzen von einem vorherigen, größeren Zeitraum.
+  const tageZurueck = Number(document.getElementById("verlauf-zeitraum").value);
+  const jetzt = new Date();
+  const xAchseMin = new Date(jetzt.getTime() - tageZurueck * 86400000);
+  const xAchseMax = new Date(jetzt.getTime() + 25 * 3600000); // Puffer für die 24h-Prognose
+
   const annotations = {};
   (daten.sondereffekte || [])
     .filter(s => !s.kraftstoff || s.kraftstoff === aktuellerKraftstoff)
@@ -516,6 +524,8 @@ function chartZeichnen(daten) {
         x: {
           type: "time",
           time: { unit: "day" },
+          min: xAchseMin,
+          max: xAchseMax,
           ticks: { color: "#8b93a8" },
           grid: { color: "rgba(255,255,255,0.06)" },
         },
